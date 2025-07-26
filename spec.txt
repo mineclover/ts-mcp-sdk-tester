@@ -1,6 +1,12 @@
 # common rule
 
-실제 구현 로직은 데모로 만들되 데모 데이터는 /demo/ 안에 분리해서 구성해서 쉽게 제거하거나 구분 할 수 있도록 구성 할 것
+
+실제 구현 로직은 데모로 만들되 데모 데이터는 /demo/ 안에 분리해서 구성해서 쉽게 제거하거나 구분 할 수 있도록 구성 한다
+작업이 완료되면 완료한 주제 아래에 해당 core 로직의 코드 파일 경로를 불릿 텍스트 라인을 1 tab insert 해서 작성해야 한다
+- ex. - /standard/prompts, /standard/tools 
+만약 이렇게 작성 된 코드 파일의 경로가 2 개 이상 일 경우 사유를 같이 작성해야 한다
+
+한번에 Phase 전체를 끝내지 말고 위 단계를 거쳐서 Phase 내의 task 를 순차적으로 처리한다
 
 # basic
 
@@ -43,10 +49,15 @@ https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/pagina
 
 # task order
 
-## Phase 1: Foundation & Core Utilities (우선순위: 높음)
-1. **logging** - 모든 기능의 기반이 되는 로깅 시스템 검토/개선
-2. **pagination** - 리스트 기능들의 공통 기반 구조 검토/개선  
-3. **ping** - 기본적인 연결성 테스트 및 헬스체크 확인
+## Phase 1: Foundation & Core Utilities (우선순위: 높음) ✅ COMPLETED
+1. **logging** - 모든 기능의 기반이 되는 로깅 시스템 검토/개선 ✅
+	- /standard/logger.ts
+	- /standard/logging.ts
+2. **pagination** - 리스트 기능들의 공통 기반 구조 검토/개선 ✅
+	- /standard/pagination-utils.ts
+	- Updated /standard/resources.ts, /standard/prompts.ts, /standard/tools.ts to use MCP-compliant opaque cursor pagination
+3. **ping** - 기본적인 연결성 테스트 및 헬스체크 확인 ✅
+	- /standard/ping.ts
 
 ## Phase 2: Basic Protocol Implementation (우선순위: 높음)
 4. **lifecycle** - 서버 초기화 및 생명주기 관리 검토

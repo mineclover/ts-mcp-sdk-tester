@@ -17,6 +17,7 @@ import type {
   TextResourceContents,
 } from "../spec/current_spec.js";
 import { DEMO_RESOURCES, getDemoResourceContent } from "../demo/index.js";
+import { paginateArray } from "./pagination-utils.js";
 
 /**
  * Standard MCP Resources Endpoints
@@ -50,34 +51,22 @@ function registerListResources(server: McpServer) {
       // Demo resources from separated demo data
       const allResources: Resource[] = DEMO_RESOURCES;
 
-      // Simple pagination implementation
-      const pageSize = 10;
-      let startIndex = 0;
-
-      if (cursor) {
-        try {
-          startIndex = parseInt(cursor, 10);
-        } catch {
-          startIndex = 0;
-        }
-      }
-
-      const endIndex = startIndex + pageSize;
-      const resources = allResources.slice(startIndex, endIndex);
+      // Use MCP-compliant pagination
+      const paginationResult = paginateArray(allResources, cursor, {
+        defaultPageSize: 10,
+        maxPageSize: 50,
+      });
 
       const result: ListResourcesResult = {
-        resources,
+        resources: paginationResult.items,
+        nextCursor: paginationResult.nextCursor,
         _meta: {
-          totalCount: allResources.length,
-          pageSize,
-          startIndex,
+          totalCount: paginationResult._meta.totalCount,
+          pageSize: paginationResult._meta.pageSize,
+          startIndex: paginationResult._meta.startIndex,
+          hasMore: paginationResult._meta.hasMore,
         },
       };
-
-      // Add pagination cursor if there are more results
-      if (endIndex < allResources.length) {
-        result.nextCursor = endIndex.toString();
-      }
 
       return result;
     }
@@ -112,34 +101,22 @@ function registerListResourceTemplates(server: McpServer) {
         },
       ];
 
-      // Simple pagination implementation
-      const pageSize = 10;
-      let startIndex = 0;
-
-      if (cursor) {
-        try {
-          startIndex = parseInt(cursor, 10);
-        } catch {
-          startIndex = 0;
-        }
-      }
-
-      const endIndex = startIndex + pageSize;
-      const resourceTemplates = allTemplates.slice(startIndex, endIndex);
+      // Use MCP-compliant pagination
+      const paginationResult = paginateArray(allTemplates, cursor, {
+        defaultPageSize: 10,
+        maxPageSize: 50,
+      });
 
       const result: ListResourceTemplatesResult = {
-        resourceTemplates,
+        resourceTemplates: paginationResult.items,
+        nextCursor: paginationResult.nextCursor,
         _meta: {
-          totalCount: allTemplates.length,
-          pageSize,
-          startIndex,
+          totalCount: paginationResult._meta.totalCount,
+          pageSize: paginationResult._meta.pageSize,
+          startIndex: paginationResult._meta.startIndex,
+          hasMore: paginationResult._meta.hasMore,
         },
       };
-
-      // Add pagination cursor if there are more results
-      if (endIndex < allTemplates.length) {
-        result.nextCursor = endIndex.toString();
-      }
 
       return result;
     }

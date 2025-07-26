@@ -3,6 +3,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import type { CallToolResult, ContentBlock, ListToolsResult, Tool } from "../spec/current_spec.js";
 import { logger } from "./logger.js";
 import { DEMO_TOOLS, executeDemoTool } from "../demo/index.js";
+import { paginateArray } from "./pagination-utils.js";
 
 /**
  * Standard MCP Tools Endpoints
@@ -35,36 +36,24 @@ function registerListTools(server: McpServer) {
       // Demo tools from separated demo data
       const allTools: Tool[] = DEMO_TOOLS;
 
-      // Simple pagination implementation
-      const pageSize = 10;
-      let startIndex = 0;
-
-      if (cursor) {
-        try {
-          startIndex = parseInt(cursor, 10);
-        } catch {
-          startIndex = 0;
-        }
-      }
-
-      const endIndex = startIndex + pageSize;
-      const tools = allTools.slice(startIndex, endIndex);
+      // Use MCP-compliant pagination
+      const paginationResult = paginateArray(allTools, cursor, {
+        defaultPageSize: 10,
+        maxPageSize: 50,
+      });
 
       const result: ListToolsResult = {
-        tools,
+        tools: paginationResult.items,
+        nextCursor: paginationResult.nextCursor,
         _meta: {
-          totalCount: allTools.length,
-          pageSize,
-          startIndex,
+          totalCount: paginationResult._meta.totalCount,
+          pageSize: paginationResult._meta.pageSize,
+          startIndex: paginationResult._meta.startIndex,
+          hasMore: paginationResult._meta.hasMore,
         },
       };
 
-      // Add pagination cursor if there are more results
-      if (endIndex < allTools.length) {
-        result.nextCursor = endIndex.toString();
-      }
-
-      await logger.logMethodExit("tools/list", { toolCount: tools.length }, "tools");
+      await logger.logMethodExit("tools/list", { toolCount: paginationResult.items.length }, "tools");
       return result;
     }
   );

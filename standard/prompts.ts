@@ -11,6 +11,7 @@ import type {
   PromptMessage,
 } from "../spec/current_spec.js";
 import { DEMO_PROMPTS, getDemoPromptMessages } from "../demo/index.js";
+import { paginateArray } from "./pagination-utils.js";
 
 /**
  * Standard MCP Prompts Endpoints
@@ -38,34 +39,22 @@ function registerListPrompts(server: McpServer) {
       // Demo prompts from separated demo data
       const allPrompts: Prompt[] = DEMO_PROMPTS;
 
-      // Simple pagination implementation
-      const pageSize = 10;
-      let startIndex = 0;
-
-      if (cursor) {
-        try {
-          startIndex = parseInt(cursor, 10);
-        } catch {
-          startIndex = 0;
-        }
-      }
-
-      const endIndex = startIndex + pageSize;
-      const prompts = allPrompts.slice(startIndex, endIndex);
+      // Use MCP-compliant pagination
+      const paginationResult = paginateArray(allPrompts, cursor, {
+        defaultPageSize: 10,
+        maxPageSize: 50,
+      });
 
       const result: ListPromptsResult = {
-        prompts,
+        prompts: paginationResult.items,
+        nextCursor: paginationResult.nextCursor,
         _meta: {
-          totalCount: allPrompts.length,
-          pageSize,
-          startIndex,
+          totalCount: paginationResult._meta.totalCount,
+          pageSize: paginationResult._meta.pageSize,
+          startIndex: paginationResult._meta.startIndex,
+          hasMore: paginationResult._meta.hasMore,
         },
       };
-
-      // Add pagination cursor if there are more results
-      if (endIndex < allPrompts.length) {
-        result.nextCursor = endIndex.toString();
-      }
 
       return result;
     }
