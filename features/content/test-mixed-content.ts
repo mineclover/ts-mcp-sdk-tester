@@ -1,5 +1,5 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 
 /**
  * Test Mixed Content Tool
@@ -13,7 +13,10 @@ export function registerTestMixedContent(server: McpServer) {
       title: "Test Mixed Content",
       description: "Test a response with multiple different content types mixed together",
       inputSchema: {
-        includeMetadata: z.boolean().optional().describe("Whether to include metadata in the response"),
+        includeMetadata: z
+          .boolean()
+          .optional()
+          .describe("Whether to include metadata in the response"),
       },
     },
     async ({ includeMetadata }) => {
@@ -27,15 +30,21 @@ export function registerTestMixedContent(server: McpServer) {
             type: "resource" as const,
             resource: {
               uri: "data://example.json",
-              text: JSON.stringify({
-                message: "Hello from resource",
-                timestamp: new Date().toISOString(),
-                metadata: includeMetadata ? {
-                  version: "1.0.0",
-                  contentTypes: ["text", "resource", "image"],
-                  generated: true
-                } : undefined
-              }, null, 2),
+              text: JSON.stringify(
+                {
+                  message: "Hello from resource",
+                  timestamp: new Date().toISOString(),
+                  metadata: includeMetadata
+                    ? {
+                        version: "1.0.0",
+                        contentTypes: ["text", "resource", "image"],
+                        generated: true,
+                      }
+                    : undefined,
+                },
+                null,
+                2
+              ),
               mimeType: "application/json",
             },
           },

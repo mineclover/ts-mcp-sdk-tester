@@ -5,11 +5,7 @@
  *
  * @internal
  */
-export type JSONRPCMessage =
-  | JSONRPCRequest
-  | JSONRPCNotification
-  | JSONRPCResponse
-  | JSONRPCError;
+export type JSONRPCMessage = JSONRPCRequest | JSONRPCNotification | JSONRPCResponse | JSONRPCError;
 
 /** @internal */
 export const LATEST_PROTOCOL_VERSION = "2025-06-18";
@@ -1412,11 +1408,7 @@ export interface ElicitRequest extends Request {
  * Restricted schema definitions that only allow primitive types
  * without nested objects or arrays.
  */
-export type PrimitiveSchemaDefinition =
-  | StringSchema
-  | NumberSchema
-  | BooleanSchema
-  | EnumSchema;
+export type PrimitiveSchemaDefinition = StringSchema | NumberSchema | BooleanSchema | EnumSchema;
 
 export interface StringSchema {
   type: "string";
@@ -1496,19 +1488,11 @@ export type ClientNotification =
   | RootsListChangedNotification;
 
 /** @internal */
-export type ClientResult =
-  | EmptyResult
-  | CreateMessageResult
-  | ListRootsResult
-  | ElicitResult;
+export type ClientResult = EmptyResult | CreateMessageResult | ListRootsResult | ElicitResult;
 
 /* Server messages */
 /** @internal */
-export type ServerRequest =
-  | PingRequest
-  | CreateMessageRequest
-  | ListRootsRequest
-  | ElicitRequest;
+export type ServerRequest = PingRequest | CreateMessageRequest | ListRootsRequest | ElicitRequest;
 
 /** @internal */
 export type ServerNotification =

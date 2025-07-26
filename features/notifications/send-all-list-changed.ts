@@ -1,5 +1,5 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { EmptySchema } from './schemas.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { EmptySchema } from "./schemas.js";
 
 /**
  * Send All List Changed Tool
@@ -19,7 +19,7 @@ export function registerSendAllListChanged(server: McpServer) {
         server.sendResourceListChanged();
         server.sendToolListChanged();
         server.sendPromptListChanged();
-        
+
         return {
           content: [
             {

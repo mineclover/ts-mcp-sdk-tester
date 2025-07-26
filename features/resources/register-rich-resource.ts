@@ -1,6 +1,6 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { registeredResources } from './register-simple-resource.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { registeredResources } from "./register-simple-resource.js";
 
 /**
  * Register Rich Resource Tool
@@ -26,21 +26,26 @@ export function registerRegisterRichResource(server: McpServer) {
           json: "application/json",
           xml: "application/xml",
           binary: "application/octet-stream",
-          markdown: "text/markdown"
+          markdown: "text/markdown",
         };
 
-        server.registerResource(name, uri, {
-          title: name,
-          description: `Rich resource with ${contentType} content`,
-        }, async (uri: any) => ({
-          contents: [
-            {
-              uri: uri.href,
-              text: content,
-              mimeType: mimeTypes[contentType],
-            },
-          ],
-        }));
+        server.registerResource(
+          name,
+          uri,
+          {
+            title: name,
+            description: `Rich resource with ${contentType} content`,
+          },
+          async (uri: any) => ({
+            contents: [
+              {
+                uri: uri.href,
+                text: content,
+                mimeType: mimeTypes[contentType],
+              },
+            ],
+          })
+        );
 
         registeredResources.set(uri, { name, contentType, content, isRich: true });
 

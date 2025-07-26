@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Shared Zod schemas for prompts domain
@@ -32,7 +32,9 @@ export const ConversationPromptRegistrationSchema = PromptRegistrationSchema.ext
 
 // Dynamic prompt registration schema
 export const DynamicPromptRegistrationSchema = PromptRegistrationSchema.extend({
-  templateType: z.enum(["greeting", "question", "instruction"]).describe("Type of template to generate"),
+  templateType: z
+    .enum(["greeting", "question", "instruction"])
+    .describe("Type of template to generate"),
   contextParam: z.string().describe("Parameter name for context"),
   contextDescription: z.string().describe("Description of the context parameter"),
 });
@@ -47,7 +49,13 @@ export const PromptArgTypeSchema = z.enum(["string", "number", "boolean", "array
 export const EmptySchema = z.object({});
 
 // Template type schema
-export const TemplateTypeSchema = z.enum(["greeting", "question", "instruction", "summary", "analysis"]);
+export const TemplateTypeSchema = z.enum([
+  "greeting",
+  "question",
+  "instruction",
+  "summary",
+  "analysis",
+]);
 
 // Conversation turn schema
 export const ConversationTurnSchema = z.object({
@@ -56,4 +64,7 @@ export const ConversationTurnSchema = z.object({
 });
 
 // Multiple conversation turns schema
-export const ConversationSchema = z.array(ConversationTurnSchema).min(1).describe("Array of conversation turns");
+export const ConversationSchema = z
+  .array(ConversationTurnSchema)
+  .min(1)
+  .describe("Array of conversation turns");

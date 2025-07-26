@@ -1,10 +1,9 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerTestContentMetadata } from "./test-content-metadata.js";
 // Import individual content tools
-import { registerTestContentTypes } from './test-content-types.js';
-import { registerTestMixedContent } from './test-mixed-content.js';
-import { registerTestLargeContent } from './test-large-content.js';
-import { registerTestContentMetadata } from './test-content-metadata.js';
+import { registerTestContentTypes } from "./test-content-types.js";
+import { registerTestLargeContent } from "./test-large-content.js";
+import { registerTestMixedContent } from "./test-mixed-content.js";
 
 /**
  * Content Type Testing Features

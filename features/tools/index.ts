@@ -1,11 +1,10 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerListRegisteredTools } from "./list-registered-tools.js";
+import { registerRegisterAdvancedTool } from "./register-advanced-tool.js";
+import { registerRegisterAsyncTool } from "./register-async-tool.js";
+import { registerRegisterParameterizedTool } from "./register-parameterized-tool.js";
 // Import individual tool management tools
-import { registerRegisterSimpleTool } from './register-simple-tool.js';
-import { registerRegisterParameterizedTool } from './register-parameterized-tool.js';
-import { registerRegisterAdvancedTool } from './register-advanced-tool.js';
-import { registerRegisterAsyncTool } from './register-async-tool.js';
-import { registerListRegisteredTools } from './list-registered-tools.js';
+import { registerRegisterSimpleTool } from "./register-simple-tool.js";
 
 /**
  * Tool Management Features
@@ -22,4 +21,4 @@ export function registerToolFeatures(server: McpServer) {
 }
 
 // Re-export shared state for cross-tool access
-export { registeredTools } from './register-simple-tool.js';
+export { registeredTools } from "./register-simple-tool.js";

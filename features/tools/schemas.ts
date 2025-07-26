@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Shared Zod schemas for tools domain
@@ -25,7 +25,10 @@ export const ParameterizedToolRegistrationSchema = ToolRegistrationSchema.extend
 
 // Advanced tool registration schema
 export const AdvancedToolRegistrationSchema = ToolRegistrationSchema.extend({
-  destructiveHint: z.boolean().optional().describe("Whether the tool performs destructive operations"),
+  destructiveHint: z
+    .boolean()
+    .optional()
+    .describe("Whether the tool performs destructive operations"),
   idempotentHint: z.boolean().optional().describe("Whether the tool is idempotent"),
 });
 

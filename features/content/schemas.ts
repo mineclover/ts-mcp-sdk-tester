@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Shared Zod schemas for content domain
@@ -10,7 +10,9 @@ export const ContentTypeSchema = z.enum(["text", "image", "audio", "resource"]);
 
 // Content testing schema
 export const ContentTestSchema = z.object({
-  contentType: z.enum(["text", "image", "audio", "resource", "all"]).describe("Type of content to test"),
+  contentType: z
+    .enum(["text", "image", "audio", "resource", "all"])
+    .describe("Type of content to test"),
 });
 
 // Mixed content testing schema
@@ -37,7 +39,7 @@ export const ContentMetadataTestSchema = z.object({
 // MIME type schema for content
 export const MimeTypeSchema = z.enum([
   "text/plain",
-  "text/html", 
+  "text/html",
   "text/markdown",
   "application/json",
   "image/png",
@@ -47,14 +49,17 @@ export const MimeTypeSchema = z.enum([
   "audio/mp3",
   "audio/ogg",
   "video/mp4",
-  "application/pdf"
+  "application/pdf",
 ]);
 
 // Content size options
 export const ContentSizeSchema = z.enum(["small", "medium", "large", "huge"]);
 
 // Base64 data schema
-export const Base64DataSchema = z.string().regex(/^[A-Za-z0-9+/]*={0,2}$/).describe("Base64 encoded data");
+export const Base64DataSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9+/]*={0,2}$/)
+  .describe("Base64 encoded data");
 
 // Empty schema for tools that don't require input
 export const EmptySchema = z.object({});

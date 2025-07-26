@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Shared Zod schemas for resources domain
@@ -32,7 +32,14 @@ export const RichResourceRegistrationSchema = ResourceRegistrationSchema.extend(
 });
 
 // Resource content type schema
-export const ResourceContentTypeSchema = z.enum(["text", "image", "audio", "application/json", "text/html", "text/markdown"]);
+export const ResourceContentTypeSchema = z.enum([
+  "text",
+  "image",
+  "audio",
+  "application/json",
+  "text/html",
+  "text/markdown",
+]);
 
 // Empty schema for tools that don't require input
 export const EmptySchema = z.object({});
@@ -41,13 +48,15 @@ export const EmptySchema = z.object({});
 export const UriSchema = z.string().url().describe("Valid URI");
 
 // MIME type schema for common types
-export const MimeTypeSchema = z.enum([
-  "text/plain",
-  "text/html",
-  "text/markdown", 
-  "application/json",
-  "image/png",
-  "image/jpeg",
-  "audio/wav",
-  "audio/mp3"
-]).describe("MIME type for resource content");
+export const MimeTypeSchema = z
+  .enum([
+    "text/plain",
+    "text/html",
+    "text/markdown",
+    "application/json",
+    "image/png",
+    "image/jpeg",
+    "audio/wav",
+    "audio/mp3",
+  ])
+  .describe("MIME type for resource content");

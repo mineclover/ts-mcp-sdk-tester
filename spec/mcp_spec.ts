@@ -9,7 +9,7 @@ export const DEFAULT_NEGOTIATED_PROTOCOL_VERSION = "2025-03-26";
 /** All supported protocol versions */
 export const SUPPORTED_PROTOCOL_VERSIONS = [
   "2025-06-18",
-  "2025-03-26", 
+  "2025-03-26",
   "2024-11-05",
   "2024-10-07",
 ] as const;
@@ -31,11 +31,7 @@ export enum ErrorCode {
 /**
  * Refers to any valid JSON-RPC object that can be decoded off the wire, or encoded to be sent.
  */
-export type JSONRPCMessage =
-  | JSONRPCRequest
-  | JSONRPCNotification
-  | JSONRPCResponse
-  | JSONRPCError;
+export type JSONRPCMessage = JSONRPCRequest | JSONRPCNotification | JSONRPCResponse | JSONRPCError;
 
 /**
  * A progress token, used to associate progress notifications with the original request.
@@ -1433,11 +1429,7 @@ export interface ElicitRequest extends Request {
  * Restricted schema definitions that only allow primitive types
  * without nested objects or arrays.
  */
-export type PrimitiveSchemaDefinition =
-  | StringSchema
-  | NumberSchema
-  | BooleanSchema
-  | EnumSchema;
+export type PrimitiveSchemaDefinition = StringSchema | NumberSchema | BooleanSchema | EnumSchema;
 
 export interface StringSchema {
   type: "string";
@@ -1517,19 +1509,11 @@ export type ClientNotification =
   | RootsListChangedNotification;
 
 /** @internal */
-export type ClientResult =
-  | EmptyResult
-  | CreateMessageResult
-  | ListRootsResult
-  | ElicitResult;
+export type ClientResult = EmptyResult | CreateMessageResult | ListRootsResult | ElicitResult;
 
 /* Server messages */
 /** @internal */
-export type ServerRequest =
-  | PingRequest
-  | CreateMessageRequest
-  | ListRootsRequest
-  | ElicitRequest;
+export type ServerRequest = PingRequest | CreateMessageRequest | ListRootsRequest | ElicitRequest;
 
 /** @internal */
 export type ServerNotification =
@@ -1706,16 +1690,15 @@ export const ToolSchema = BaseMetadataSchema.extend({
       required: z.optional(z.array(z.string())),
     })
     .passthrough(),
-  outputSchema: z
-    .optional(
-      z
-        .object({
-          type: z.literal("object"),
-          properties: z.optional(z.object({}).passthrough()),
-          required: z.optional(z.array(z.string())),
-        })
-        .passthrough(),
-    ),
+  outputSchema: z.optional(
+    z
+      .object({
+        type: z.literal("object"),
+        properties: z.optional(z.object({}).passthrough()),
+        required: z.optional(z.array(z.string())),
+      })
+      .passthrough()
+  ),
   annotations: z.optional(ToolAnnotationsSchema),
   _meta: z.optional(z.object({}).passthrough()),
 });
@@ -1754,7 +1737,7 @@ export const ClientCapabilitiesSchema = z
         .object({
           listChanged: z.optional(z.boolean()),
         })
-        .passthrough(),
+        .passthrough()
     ),
     sampling: z.optional(z.object({}).passthrough()),
     elicitation: z.optional(z.object({}).passthrough()),
@@ -1772,7 +1755,7 @@ export const ServerCapabilitiesSchema = z
         .object({
           listChanged: z.optional(z.boolean()),
         })
-        .passthrough(),
+        .passthrough()
     ),
     resources: z.optional(
       z
@@ -1780,14 +1763,14 @@ export const ServerCapabilitiesSchema = z
           subscribe: z.optional(z.boolean()),
           listChanged: z.optional(z.boolean()),
         })
-        .passthrough(),
+        .passthrough()
     ),
     tools: z.optional(
       z
         .object({
           listChanged: z.optional(z.boolean()),
         })
-        .passthrough(),
+        .passthrough()
     ),
   })
   .passthrough();
@@ -1851,7 +1834,7 @@ export class McpError extends Error {
   constructor(
     public code: ErrorCode,
     message: string,
-    public data?: unknown,
+    public data?: unknown
   ) {
     super(message);
     this.name = "McpError";

@@ -1,5 +1,5 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { EmptySchema } from './schemas.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { EmptySchema } from "./schemas.js";
 
 /**
  * Send Resource List Changed Tool

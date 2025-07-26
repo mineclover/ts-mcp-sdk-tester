@@ -1,6 +1,5 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { SimpleResourceRegistrationSchema } from './schemas.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { SimpleResourceRegistrationSchema } from "./schemas.js";
 
 // Store registered resources for testing
 const registeredResources = new Map<string, any>();
@@ -20,18 +19,23 @@ export function registerRegisterSimpleResource(server: McpServer) {
     },
     async ({ uri, name, description, content }) => {
       try {
-        server.registerResource(name, uri, {
-          title: name,
-          description: description || `Resource: ${name}`,
-        }, async (uri: any) => ({
-          contents: [
-            {
-              uri: uri.href,
-              text: content,
-              mimeType: "text/plain",
-            },
-          ],
-        }));
+        server.registerResource(
+          name,
+          uri,
+          {
+            title: name,
+            description: description || `Resource: ${name}`,
+          },
+          async (uri: any) => ({
+            contents: [
+              {
+                uri: uri.href,
+                text: content,
+                mimeType: "text/plain",
+              },
+            ],
+          })
+        );
 
         registeredResources.set(uri, { name, description, content });
 

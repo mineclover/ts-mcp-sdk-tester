@@ -1,5 +1,5 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 
 /**
  * Test Large Content Tool
@@ -22,7 +22,7 @@ export function registerTestLargeContent(server: McpServer) {
         const sizes = {
           small: 100,
           medium: 1000,
-          large: 10000
+          large: 10000,
         };
 
         const targetSize = sizes[size];
@@ -30,21 +30,24 @@ export function registerTestLargeContent(server: McpServer) {
 
         switch (contentType) {
           case "text":
-            generatedContent = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(Math.ceil(targetSize / 60));
+            generatedContent = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(
+              Math.ceil(targetSize / 60)
+            );
             break;
-          case "json":
+          case "json": {
             const jsonObj = {
               data: Array.from({ length: Math.ceil(targetSize / 20) }, (_, i) => ({
                 id: i,
                 name: `Item ${i}`,
                 value: Math.random() * 100,
-                timestamp: new Date().toISOString()
-              }))
+                timestamp: new Date().toISOString(),
+              })),
             };
             generatedContent = JSON.stringify(jsonObj, null, 2);
             break;
+          }
           case "base64":
-            generatedContent = Buffer.from("A".repeat(targetSize)).toString('base64');
+            generatedContent = Buffer.from("A".repeat(targetSize)).toString("base64");
             break;
         }
 
@@ -55,8 +58,9 @@ export function registerTestLargeContent(server: McpServer) {
               text: `Generated ${size} ${contentType} content (${generatedContent.length} characters):`,
             },
             {
-              type: contentType === "base64" ? "text" as const : "text" as const,
-              text: generatedContent.substring(0, 1000) + (generatedContent.length > 1000 ? "..." : ""),
+              type: contentType === "base64" ? ("text" as const) : ("text" as const),
+              text:
+                generatedContent.substring(0, 1000) + (generatedContent.length > 1000 ? "..." : ""),
             },
             {
               type: "text" as const,

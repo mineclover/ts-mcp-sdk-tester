@@ -1,6 +1,6 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { registeredPrompts } from './register-simple-prompt.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { registeredPrompts } from "./register-simple-prompt.js";
 
 /**
  * Register Conversation Prompt Tool
@@ -22,38 +22,44 @@ export function registerRegisterConversationPrompt(server: McpServer) {
     },
     async ({ name, description, systemMessage, userMessage }) => {
       try {
-        server.registerPrompt(name, {
-          title: name,
-          description: description,
-          argsSchema: {
-            topic: z.string().describe("Topic for the conversation"),
-            context: z.string().optional().describe("Additional context"),
+        server.registerPrompt(
+          name,
+          {
+            title: name,
+            description: description,
+            argsSchema: {
+              topic: z.string().describe("Topic for the conversation"),
+              context: z.string().optional().describe("Additional context"),
+            },
           },
-        }, (args: any) => ({
-          messages: [
-            {
-              role: "system" as const,
-              content: {
-                type: "text" as const,
-                text: systemMessage,
+          (args: any) => ({
+            messages: [
+              {
+                role: "system" as const,
+                content: {
+                  type: "text" as const,
+                  text: systemMessage,
+                },
               },
-            },
-            {
-              role: "user" as const,
-              content: {
-                type: "text" as const,
-                text: userMessage.replace("{topic}", args.topic).replace("{context}", args.context || ""),
+              {
+                role: "user" as const,
+                content: {
+                  type: "text" as const,
+                  text: userMessage
+                    .replace("{topic}", args.topic)
+                    .replace("{context}", args.context || ""),
+                },
               },
-            },
-          ],
-        }));
+            ],
+          })
+        );
 
-        registeredPrompts.set(name, { 
-          description, 
-          systemMessage, 
-          userMessage, 
-          hasArgs: true, 
-          isConversation: true 
+        registeredPrompts.set(name, {
+          description,
+          systemMessage,
+          userMessage,
+          hasArgs: true,
+          isConversation: true,
         });
 
         return {

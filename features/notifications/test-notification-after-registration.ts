@@ -1,5 +1,5 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 
 /**
  * Test Notification After Registration Tool
@@ -20,64 +20,77 @@ export function registerTestNotificationAfterRegistration(server: McpServer) {
     async ({ itemType, itemName }) => {
       try {
         const timestamp = new Date().toISOString();
-        
+
         switch (itemType) {
           case "resource":
             // Register a test resource
-            server.registerResource(itemName, `test://${itemName}`, {
-              title: itemName,
-              description: `Test resource created at ${timestamp}`,
-            }, async (uri: any) => ({
-              contents: [
-                {
-                  uri: uri.href,
-                  text: `Resource ${itemName} created at ${timestamp}`,
-                  mimeType: "text/plain",
-                },
-              ],
-            }));
-            
+            server.registerResource(
+              itemName,
+              `test://${itemName}`,
+              {
+                title: itemName,
+                description: `Test resource created at ${timestamp}`,
+              },
+              async (uri: any) => ({
+                contents: [
+                  {
+                    uri: uri.href,
+                    text: `Resource ${itemName} created at ${timestamp}`,
+                    mimeType: "text/plain",
+                  },
+                ],
+              })
+            );
+
             // Send notification
             server.sendResourceListChanged();
             break;
-            
+
           case "tool":
             // Register a test tool
-            server.registerTool(itemName, {
-              title: itemName,
-              description: `Test tool created at ${timestamp}`,
-              inputSchema: {},
-            }, async () => ({
-              content: [
-                {
-                  type: "text" as const,
-                  text: `Tool ${itemName} executed at ${new Date().toISOString()}`,
-                },
-              ],
-            }));
-            
+            server.registerTool(
+              itemName,
+              {
+                title: itemName,
+                description: `Test tool created at ${timestamp}`,
+                inputSchema: {},
+              },
+              async () => ({
+                content: [
+                  {
+                    type: "text" as const,
+                    text: `Tool ${itemName} executed at ${new Date().toISOString()}`,
+                  },
+                ],
+              })
+            );
+
             // Send notification
             server.sendToolListChanged();
             break;
-            
+
           case "prompt":
             // Register a test prompt
-            server.registerPrompt(itemName, {
-              title: itemName,
-              description: `Test prompt created at ${timestamp}`,
-              argsSchema: {},
-            }, () => ({
-              messages: [
-                {
-                  role: "user" as const,
-                  content: {
-                    type: "text" as const,
-                    text: `Prompt ${itemName} generated at ${new Date().toISOString()}`,
+            server.registerPrompt(
+              itemName,
+              {
+                title: itemName,
+                description: `Test prompt created at ${timestamp}`,
+                argsSchema: {},
+              },
+              () => ({
+                messages: [
+                  {
+                    role: "user" as const,
+                    content: {
+                      type: "text" as const,
+                      text: `Prompt ${itemName} generated at ${new Date().toISOString()}`,
+                    },
                   },
-                },
-              ],
-            }));
-            
+                ],
+              })
+            );
+
             // Send notification
             server.sendPromptListChanged();
             break;

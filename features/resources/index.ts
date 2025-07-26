@@ -1,10 +1,9 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerListRegisteredResources } from "./list-registered-resources.js";
+import { registerRegisterRichResource } from "./register-rich-resource.js";
 // Import individual resource tools
-import { registerRegisterSimpleResource } from './register-simple-resource.js';
-import { registerRegisterTemplateResource } from './register-template-resource.js';
-import { registerRegisterRichResource } from './register-rich-resource.js';
-import { registerListRegisteredResources } from './list-registered-resources.js';
+import { registerRegisterSimpleResource } from "./register-simple-resource.js";
+import { registerRegisterTemplateResource } from "./register-template-resource.js";
 
 /**
  * Resource Management Features
@@ -20,4 +19,4 @@ export function registerResourceFeatures(server: McpServer) {
 }
 
 // Re-export shared state for cross-tool access
-export { registeredResources } from './register-simple-resource.js';
+export { registeredResources } from "./register-simple-resource.js";

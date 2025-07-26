@@ -1,6 +1,6 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { registeredPrompts } from './register-simple-prompt.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { registeredPrompts } from "./register-simple-prompt.js";
 
 /**
  * Register Dynamic Prompt Tool
@@ -20,39 +20,45 @@ export function registerRegisterDynamicPrompt(server: McpServer) {
     },
     async ({ name, description }) => {
       try {
-        server.registerPrompt(name, {
-          title: name,
-          description: description,
-          argsSchema: {
-            type: z.enum(["creative", "analytical", "technical", "casual"]).describe("Type of prompt to generate"),
-            subject: z.string().describe("Subject matter"),
+        server.registerPrompt(
+          name,
+          {
+            title: name,
+            description: description,
+            argsSchema: {
+              type: z
+                .enum(["creative", "analytical", "technical", "casual"])
+                .describe("Type of prompt to generate"),
+              subject: z.string().describe("Subject matter"),
+            },
           },
-        }, (args: any) => {
-          const templates = {
-            creative: `Write a creative and imaginative piece about ${args.subject}. Use vivid descriptions and storytelling techniques.`,
-            analytical: `Provide a detailed analytical breakdown of ${args.subject}. Include data, facts, and logical reasoning.`,
-            technical: `Explain the technical aspects of ${args.subject}. Focus on implementation details and best practices.`,
-            casual: `Tell me about ${args.subject} in a casual, conversational way. Keep it simple and friendly.`
-          };
+          (args: any) => {
+            const templates = {
+              creative: `Write a creative and imaginative piece about ${args.subject}. Use vivid descriptions and storytelling techniques.`,
+              analytical: `Provide a detailed analytical breakdown of ${args.subject}. Include data, facts, and logical reasoning.`,
+              technical: `Explain the technical aspects of ${args.subject}. Focus on implementation details and best practices.`,
+              casual: `Tell me about ${args.subject} in a casual, conversational way. Keep it simple and friendly.`,
+            };
 
-          return {
-            messages: [
-              {
-                role: "user" as const,
-                content: {
-                  type: "text" as const,
-                  text: templates[args.type as keyof typeof templates],
+            return {
+              messages: [
+                {
+                  role: "user" as const,
+                  content: {
+                    type: "text" as const,
+                    text: templates[args.type as keyof typeof templates],
+                  },
                 },
-              },
-            ],
-          };
-        });
+              ],
+            };
+          }
+        );
 
-        registeredPrompts.set(name, { 
-          description, 
-          hasArgs: true, 
+        registeredPrompts.set(name, {
+          description,
+          hasArgs: true,
           isDynamic: true,
-          supportedTypes: ["creative", "analytical", "technical", "casual"]
+          supportedTypes: ["creative", "analytical", "technical", "casual"],
         });
 
         return {

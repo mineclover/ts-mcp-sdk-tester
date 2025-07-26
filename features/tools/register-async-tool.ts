@@ -1,7 +1,7 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { registeredTools } from './register-simple-tool.js';
-import { AsyncToolRegistrationSchema } from './schemas.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { registeredTools } from "./register-simple-tool.js";
+import { AsyncToolRegistrationSchema } from "./schemas.js";
 
 /**
  * Register Async Tool
@@ -18,25 +18,29 @@ export function registerRegisterAsyncTool(server: McpServer) {
     },
     async ({ name, description, delay }) => {
       try {
-        server.registerTool(name, {
-          title: name,
-          description: description,
-          inputSchema: {
-            message: z.string().describe("Message to process after delay"),
+        server.registerTool(
+          name,
+          {
+            title: name,
+            description: description,
+            inputSchema: {
+              message: z.string().describe("Message to process after delay"),
+            },
           },
-        }, async (params: any) => {
-          // Simulate async operation
-          await new Promise(resolve => setTimeout(resolve, delay));
-          
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `Async tool ${name} processed after ${delay}ms: ${params.message}`,
-              },
-            ],
-          };
-        });
+          async (params: any) => {
+            // Simulate async operation
+            await new Promise((resolve) => setTimeout(resolve, delay));
+
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `Async tool ${name} processed after ${delay}ms: ${params.message}`,
+                },
+              ],
+            };
+          }
+        );
 
         registeredTools.set(name, { description, delay, isAsync: true });
 

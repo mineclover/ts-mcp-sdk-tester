@@ -1,6 +1,6 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { registeredTools } from './register-simple-tool.js';
-import { EmptySchema } from './schemas.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registeredTools } from "./register-simple-tool.js";
+import { EmptySchema } from "./schemas.js";
 
 /**
  * List Registered Tools
@@ -25,7 +25,7 @@ export function registerListRegisteredTools(server: McpServer) {
           content: [
             {
               type: "text" as const,
-              text: `Registered tools:\n${tools.join('\n') || 'No tools registered'}`,
+              text: `Registered tools:\n${tools.join("\n") || "No tools registered"}`,
             },
           ],
         };

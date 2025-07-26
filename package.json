@@ -5,12 +5,19 @@
   "private": true,
   "scripts": {
     "build": "mkdir -p dist && bun build --compile --outfile=dist/$npm_package_name index.ts",
-    "show-package-name": "echo $npm_package_name"
+    "show-package-name": "echo $npm_package_name",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint --write .",
+    "lint:check": "biome lint .",
+    "check": "biome check --write .",
+    "check:ci": "biome ci ."
   },
   "bun-create": {
     "start": "bun run echo 'Read README.md and implement an MCP server'"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.1.2",
     "@types/bun": "latest",
     "@types/express": "^5.0.3",
     "@types/cors": "^2.8.19"
@@ -20,7 +27,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",
-    "express": "^4.21.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
   }
 }

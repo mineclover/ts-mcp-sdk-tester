@@ -1,5 +1,5 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 
 /**
  * Test Content Metadata Tool
@@ -20,7 +20,7 @@ export function registerTestContentMetadata(server: McpServer) {
     async ({ contentType, includeCustomMeta }) => {
       try {
         const baseContent = {
-          type: contentType ,
+          type: contentType,
         };
 
         let content: any;
@@ -35,27 +35,31 @@ export function registerTestContentMetadata(server: McpServer) {
                 category: "test",
                 tags: ["content", "metadata", "test"],
                 timestamp: new Date().toISOString(),
-              }
-            })
+              },
+            }),
           };
         } else {
           content = {
             ...baseContent,
             resource: {
               uri: "test://metadata-example",
-              text: JSON.stringify({
-                message: "Resource with metadata",
-                data: { key: "value", number: 42 }
-              }, null, 2),
+              text: JSON.stringify(
+                {
+                  message: "Resource with metadata",
+                  data: { key: "value", number: 42 },
+                },
+                null,
+                2
+              ),
               mimeType: "application/json",
               ...(includeCustomMeta && {
                 _meta: {
                   resourceType: "example",
                   version: "1.0",
                   readonly: false,
-                }
-              })
-            }
+                },
+              }),
+            },
           };
         }
 
@@ -66,8 +70,8 @@ export function registerTestContentMetadata(server: McpServer) {
               responseType: "content-metadata-test",
               generatedAt: new Date().toISOString(),
               contentCount: 1,
-            }
-          })
+            },
+          }),
         };
       } catch (error) {
         return {

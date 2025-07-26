@@ -1,6 +1,6 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { EmptySchema } from './schemas.js';
-import { registeredResources } from './register-simple-resource.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registeredResources } from "./register-simple-resource.js";
+import { EmptySchema } from "./schemas.js";
 
 /**
  * List Registered Resources Tool
@@ -25,7 +25,7 @@ export function registerListRegisteredResources(server: McpServer) {
           content: [
             {
               type: "text" as const,
-              text: `Registered resources:\n${resources.join('\n') || 'No resources registered'}`,
+              text: `Registered resources:\n${resources.join("\n") || "No resources registered"}`,
             },
           ],
         };

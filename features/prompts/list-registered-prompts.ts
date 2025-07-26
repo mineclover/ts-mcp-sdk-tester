@@ -1,6 +1,6 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { EmptySchema } from './schemas.js';
-import { registeredPrompts } from './register-simple-prompt.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registeredPrompts } from "./register-simple-prompt.js";
+import { EmptySchema } from "./schemas.js";
 
 /**
  * List Registered Prompts Tool
@@ -25,7 +25,7 @@ export function registerListRegisteredPrompts(server: McpServer) {
           content: [
             {
               type: "text" as const,
-              text: `Registered prompts:\n${prompts.join('\n') || 'No prompts registered'}`,
+              text: `Registered prompts:\n${prompts.join("\n") || "No prompts registered"}`,
             },
           ],
         };

@@ -1,7 +1,7 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { registeredTools } from './register-simple-tool.js';
-import { ParameterizedToolRegistrationSchema } from './schemas.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { registeredTools } from "./register-simple-tool.js";
+import { ParameterizedToolRegistrationSchema } from "./schemas.js";
 
 /**
  * Register Parameterized Tool
@@ -19,7 +19,7 @@ export function registerRegisterParameterizedTool(server: McpServer) {
     async ({ name, description, paramName, paramDescription, paramType }) => {
       try {
         const schema: any = {};
-        
+
         switch (paramType) {
           case "string":
             schema[paramName] = z.string().describe(paramDescription);
@@ -32,20 +32,30 @@ export function registerRegisterParameterizedTool(server: McpServer) {
             break;
         }
 
-        server.registerTool(name, {
-          title: name,
-          description: description,
-          inputSchema: schema,
-        }, async (params: any) => ({
-          content: [
-            {
-              type: "text" as const,
-              text: `Tool ${name} called with parameters: ${JSON.stringify(params)}`,
-            },
-          ],
-        }));
+        server.registerTool(
+          name,
+          {
+            title: name,
+            description: description,
+            inputSchema: schema,
+          },
+          async (params: any) => ({
+            content: [
+              {
+                type: "text" as const,
+                text: `Tool ${name} called with parameters: ${JSON.stringify(params)}`,
+              },
+            ],
+          })
+        );
 
-        registeredTools.set(name, { description, paramName, paramDescription, paramType, hasParams: true });
+        registeredTools.set(name, {
+          description,
+          paramName,
+          paramDescription,
+          paramType,
+          hasParams: true,
+        });
 
         return {
           content: [

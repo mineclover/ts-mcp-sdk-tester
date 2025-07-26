@@ -1,7 +1,7 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { registeredPrompts } from './register-simple-prompt.js';
-import { ParameterizedPromptRegistrationSchema } from './schemas.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { registeredPrompts } from "./register-simple-prompt.js";
+import { ParameterizedPromptRegistrationSchema } from "./schemas.js";
 
 /**
  * Register Parameterized Prompt Tool
@@ -21,23 +21,33 @@ export function registerRegisterParameterizedPrompt(server: McpServer) {
         const argsSchema: any = {};
         argsSchema[argName] = z.string().describe(argDescription);
 
-        server.registerPrompt(name, {
-          title: name,
-          description: description,
-          argsSchema: argsSchema,
-        }, (args: any) => ({
-          messages: [
-            {
-              role: "user" as const,
-              content: {
-                type: "text" as const,
-                text: messageTemplate.replace(`{${argName}}`, args[argName]),
+        server.registerPrompt(
+          name,
+          {
+            title: name,
+            description: description,
+            argsSchema: argsSchema,
+          },
+          (args: any) => ({
+            messages: [
+              {
+                role: "user" as const,
+                content: {
+                  type: "text" as const,
+                  text: messageTemplate.replace(`{${argName}}`, args[argName]),
+                },
               },
-            },
-          ],
-        }));
+            ],
+          })
+        );
 
-        registeredPrompts.set(name, { description, argName, argDescription, messageTemplate, hasArgs: true });
+        registeredPrompts.set(name, {
+          description,
+          argName,
+          argDescription,
+          messageTemplate,
+          hasArgs: true,
+        });
 
         return {
           content: [

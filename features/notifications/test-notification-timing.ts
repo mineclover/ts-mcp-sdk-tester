@@ -1,6 +1,5 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { NotificationTimingTestSchema } from './schemas.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { NotificationTimingTestSchema } from "./schemas.js";
 
 /**
  * Test Notification Timing Tool
@@ -18,15 +17,15 @@ export function registerTestNotificationTiming(server: McpServer) {
     async ({ count, interval, type }) => {
       try {
         const results: string[] = [];
-        
+
         for (let i = 0; i < count; i++) {
           if (i > 0) {
             // Wait for the specified interval
-            await new Promise(resolve => setTimeout(resolve, interval));
+            await new Promise((resolve) => setTimeout(resolve, interval));
           }
 
           const timestamp = new Date().toISOString();
-          
+
           switch (type) {
             case "resources":
               server.sendResourceListChanged();
@@ -53,7 +52,7 @@ export function registerTestNotificationTiming(server: McpServer) {
           content: [
             {
               type: "text" as const,
-              text: `Successfully sent ${count} ${type} notifications with ${interval}ms intervals:\n${results.join('\n')}`,
+              text: `Successfully sent ${count} ${type} notifications with ${interval}ms intervals:\n${results.join("\n")}`,
             },
           ],
         };

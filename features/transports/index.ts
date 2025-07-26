@@ -1,9 +1,9 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import express, { type Request, type Response } from 'express';
-import cors from 'cors';
-import { randomUUID } from 'node:crypto';
+import { randomUUID } from "node:crypto";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import cors from "cors";
+import express, { type Request, type Response } from "express";
 
 /**
  * Transport Management Features
@@ -17,16 +17,14 @@ export interface TransportOptions {
 
 export function setupTransport(server: McpServer, options: TransportOptions = {}) {
   const { port, transport } = options;
-  
+
   // Determine transport type based on arguments
-  const transportType = transport || (port ? 'streamable' : 'stdio');
-  
+  const transportType = transport || (port ? "streamable" : "stdio");
+
   switch (transportType) {
-    case 'stdio':
+    case "stdio":
       setupStdioTransport(server);
       break;
-    case 'streamable':
-    case 'http': // Alias for backwards compatibility
     default:
       setupStreamableTransport(server, port || 3000);
       break;
@@ -36,38 +34,38 @@ export function setupTransport(server: McpServer, options: TransportOptions = {}
 function setupStdioTransport(server: McpServer) {
   const transport = new StdioServerTransport();
   server.connect(transport);
-  console.error('MCP Server running on stdio transport');
+  console.error("MCP Server running on stdio transport");
 }
 
 // Streamable HTTP transport
 function setupStreamableTransport(server: McpServer, port: number) {
   const app = express();
-  app.use(cors({ origin: '*', exposedHeaders: ['Mcp-Session-Id'] }));
+  app.use(cors({ origin: "*", exposedHeaders: ["Mcp-Session-Id"] }));
   app.use(express.json());
 
   // Store transports by session ID
   const transports: Record<string, StreamableHTTPServerTransport> = {};
 
   // Modern Streamable HTTP endpoint
-  app.all('/mcp', async (req: Request, res: Response) => {
+  app.all("/mcp", async (req: Request, res: Response) => {
     console.error(`Received ${req.method} request to /mcp (Streamable HTTP)`);
 
     try {
       // Check for existing session ID
-      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+      const sessionId = req.headers["mcp-session-id"] as string | undefined;
       let transport: StreamableHTTPServerTransport;
 
       if (sessionId && transports[sessionId]) {
         // Reuse existing transport
         transport = transports[sessionId];
-      } else if (!sessionId && req.method === 'POST') {
+      } else if (!sessionId && req.method === "POST") {
         // Create new transport for initialization
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (sessionId) => {
             console.error(`Streamable HTTP session initialized: ${sessionId}`);
             transports[sessionId] = transport;
-          }
+          },
         });
 
         // Set up onclose handler
@@ -84,10 +82,10 @@ function setupStreamableTransport(server: McpServer, port: number) {
       } else {
         // Invalid request
         res.status(400).json({
-          jsonrpc: '2.0',
+          jsonrpc: "2.0",
           error: {
             code: -32000,
-            message: 'Bad Request: No valid session ID provided',
+            message: "Bad Request: No valid session ID provided",
           },
           id: null,
         });
@@ -97,13 +95,13 @@ function setupStreamableTransport(server: McpServer, port: number) {
       // Handle the request with the transport
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
-      console.error('Error handling Streamable HTTP request:', error);
+      console.error("Error handling Streamable HTTP request:", error);
       if (!res.headersSent) {
         res.status(500).json({
-          jsonrpc: '2.0',
+          jsonrpc: "2.0",
           error: {
             code: -32603,
-            message: 'Internal server error',
+            message: "Internal server error",
           },
           id: null,
         });
@@ -112,35 +110,35 @@ function setupStreamableTransport(server: McpServer, port: number) {
   });
 
   // Health check endpoint
-  app.get('/health', (_req, res) => {
-    res.json({ 
-      status: 'ok', 
-      transport: 'streamable-http', 
+  app.get("/health", (_req, res) => {
+    res.json({
+      status: "ok",
+      transport: "streamable-http",
       timestamp: new Date().toISOString(),
-      protocol: '2025-03-26'
+      protocol: "2025-03-26",
     });
   });
 
   // Server info endpoint
-  app.get('/info', (_req, res) => {
+  app.get("/info", (_req, res) => {
     res.json({
-      name: 'MCP SDK Tester',
-      version: '1.0.0',
-      transport: 'streamable-http',
-      protocol: '2025-03-26',
+      name: "MCP SDK Tester",
+      version: "1.0.0",
+      transport: "streamable-http",
+      protocol: "2025-03-26",
       port: port,
       endpoints: {
-        mcp: '/mcp',
-        health: '/health',
-        info: '/info'
+        mcp: "/mcp",
+        health: "/health",
+        info: "/info",
       },
-      tools: getToolCount()
+      tools: getToolCount(),
     });
   });
 
   // Root endpoint with server information
-  app.get('/', (_req: Request, res: Response) => {
-    res.writeHead(200, { 'Content-Type': 'text/html' });
+  app.get("/", (_req: Request, res: Response) => {
+    res.writeHead(200, { "Content-Type": "text/html" });
     res.end(`
       <!DOCTYPE html>
       <html>
@@ -227,14 +225,13 @@ function setupStreamableTransport(server: McpServer, port: number) {
   });
 
   // Graceful shutdown
-  process.on('SIGINT', () => {
-    console.error('Shutting down Streamable HTTP server...');
+  process.on("SIGINT", () => {
+    console.error("Shutting down Streamable HTTP server...");
     httpServer.close(() => {
       process.exit(0);
     });
   });
 }
-
 
 // Helper function to get tool count for HTML display
 function getToolCount(): number {
@@ -245,23 +242,22 @@ function getToolCount(): number {
 export function parseArguments(): TransportOptions {
   const args = process.argv.slice(2);
   const options: TransportOptions = {};
-  
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
-    if (arg === '--port' && i + 1 < args.length) {
+
+    if (arg === "--port" && i + 1 < args.length) {
       options.port = parseInt(args[i + 1], 10);
       i++; // Skip next argument as it's the port value
-    } else if (arg === '--transport' && i + 1 < args.length) {
+    } else if (arg === "--transport" && i + 1 < args.length) {
       options.transport = args[i + 1];
       i++; // Skip next argument as it's the transport value
-    } else if (arg.startsWith('--port=')) {
-      options.port = parseInt(arg.split('=')[1], 10);
-    } else if (arg.startsWith('--transport=')) {
-      options.transport = arg.split('=')[1];
+    } else if (arg.startsWith("--port=")) {
+      options.port = parseInt(arg.split("=")[1], 10);
+    } else if (arg.startsWith("--transport=")) {
+      options.transport = arg.split("=")[1];
     }
   }
-  
+
   return options;
 }
-

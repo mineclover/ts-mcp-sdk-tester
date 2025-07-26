@@ -1,7 +1,7 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { registeredTools } from './register-simple-tool.js';
-import { AdvancedToolRegistrationSchema } from './schemas.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { registeredTools } from "./register-simple-tool.js";
+import { AdvancedToolRegistrationSchema } from "./schemas.js";
 
 /**
  * Register Advanced Tool
@@ -18,46 +18,52 @@ export function registerRegisterAdvancedTool(server: McpServer) {
     },
     async ({ name, description, destructiveHint, idempotentHint }) => {
       try {
-        server.registerTool(name, {
-          title: name,
-          description: description,
-          inputSchema: {
-            input: z.string().describe("Input text to process"),
-          },
-          outputSchema: {
-            result: z.string().describe("Processed result"),
-            metadata: z.object({
-              timestamp: z.string(),
-              processingTime: z.number(),
-            }).describe("Processing metadata"),
-          },
-          annotations: {
-            destructiveHint: destructiveHint || false,
-            idempotentHint: idempotentHint || true,
-          },
-        }, async (params: any) => ({
-          content: [
-            {
-              type: "text" as const,
-              text: `Advanced tool ${name} processed: ${params.input}`,
+        server.registerTool(
+          name,
+          {
+            title: name,
+            description: description,
+            inputSchema: {
+              input: z.string().describe("Input text to process"),
             },
-            {
-              type: "resource" as const,
-              resource: {
-                uri: `result://advanced-${name}`,
-                text: `Processed result: ${params.input.toUpperCase()}`,
-                mimeType: "text/plain",
+            outputSchema: {
+              result: z.string().describe("Processed result"),
+              metadata: z
+                .object({
+                  timestamp: z.string(),
+                  processingTime: z.number(),
+                })
+                .describe("Processing metadata"),
+            },
+            annotations: {
+              destructiveHint: destructiveHint || false,
+              idempotentHint: idempotentHint || true,
+            },
+          },
+          async (params: any) => ({
+            content: [
+              {
+                type: "text" as const,
+                text: `Advanced tool ${name} processed: ${params.input}`,
               },
-            },
-          ],
-        }));
+              {
+                type: "resource" as const,
+                resource: {
+                  uri: `result://advanced-${name}`,
+                  text: `Processed result: ${params.input.toUpperCase()}`,
+                  mimeType: "text/plain",
+                },
+              },
+            ],
+          })
+        );
 
-        registeredTools.set(name, { 
-          description, 
-          hasParams: true, 
-          advanced: true, 
-          destructiveHint, 
-          idempotentHint 
+        registeredTools.set(name, {
+          description,
+          hasParams: true,
+          advanced: true,
+          destructiveHint,
+          idempotentHint,
         });
 
         return {

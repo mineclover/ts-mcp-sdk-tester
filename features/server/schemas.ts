@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Shared Zod schemas for server domain
@@ -10,7 +10,10 @@ export const EmptySchema = z.object({});
 
 // Server connection test schema
 export const ServerConnectionTestSchema = z.object({
-  includeDetails: z.boolean().default(false).describe("Whether to include detailed connection information"),
+  includeDetails: z
+    .boolean()
+    .default(false)
+    .describe("Whether to include detailed connection information"),
 });
 
 // Server info request schema
@@ -70,6 +73,6 @@ export const ServerConfigSchema = z.object({
   enableLogging: BooleanFlagSchema,
   enableResources: BooleanFlagSchema,
   enableTools: BooleanFlagSchema,
-  enablePrompts: BooleanFlagSchema, 
+  enablePrompts: BooleanFlagSchema,
   enableNotifications: BooleanFlagSchema,
 });

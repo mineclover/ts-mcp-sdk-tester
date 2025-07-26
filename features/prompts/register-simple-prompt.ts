@@ -1,6 +1,5 @@
-import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { SimplePromptRegistrationSchema, EmptySchema } from './schemas.js';
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { EmptySchema, SimplePromptRegistrationSchema } from "./schemas.js";
 
 // Store registered prompts for testing
 const registeredPrompts = new Map<string, any>();
@@ -20,21 +19,25 @@ export function registerRegisterSimplePrompt(server: McpServer) {
     },
     async ({ name, description, message }) => {
       try {
-        server.registerPrompt(name, {
-          title: name,
-          description: description,
-          argsSchema: EmptySchema.shape,
-        }, () => ({
-          messages: [
-            {
-              role: "user" as const,
-              content: {
-                type: "text" as const,
-                text: message,
+        server.registerPrompt(
+          name,
+          {
+            title: name,
+            description: description,
+            argsSchema: EmptySchema.shape,
+          },
+          () => ({
+            messages: [
+              {
+                role: "user" as const,
+                content: {
+                  type: "text" as const,
+                  text: message,
+                },
               },
-            },
-          ],
-        }));
+            ],
+          })
+        );
 
         registeredPrompts.set(name, { description, message, hasArgs: false });
 
