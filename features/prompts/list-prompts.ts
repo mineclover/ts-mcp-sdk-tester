@@ -1,33 +1,63 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { ListPromptsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  ListPromptsRequest, 
   ListPromptsResult,
-  PaginatedRequest
-} from "../../spec/mcp_spec.js";
-
-const ListPromptsParamsSchema = z.object({
-  cursor: z.string().optional(),
-  _meta: z.object({}).passthrough().optional(),
-}).optional();
+  Prompt
+} from "../../spec/current_spec.js";
 
 /**
  * Registers the prompts/list endpoint handler
  * Returns a list of all available prompts from the server
  */
 export function registerListPrompts(server: McpServer) {
-  server.request(
-    {
-      method: "prompts/list",
-      schema: {
-        params: ListPromptsParamsSchema,
-      },
-    },
+  server.server.setRequestHandler(
+    ListPromptsRequestSchema,
     async (request): Promise<ListPromptsResult> => {
       const { cursor } = request.params || {};
       
-      // Get all registered prompts from the server
-      const allPrompts = Array.from((server as any)._prompts.values());
+      // Sample prompts for demonstration
+      const allPrompts: Prompt[] = [
+        {
+          name: "greeting",
+          title: "Greeting Prompt",
+          description: "A simple greeting prompt template",
+          arguments: [
+            {
+              name: "name",
+              title: "Name",
+              description: "The name to greet",
+              required: true,
+            }
+          ],
+          _meta: { created: new Date().toISOString() },
+        },
+        {
+          name: "code-review",
+          title: "Code Review Prompt",
+          description: "Prompt for reviewing code changes",
+          arguments: [
+            {
+              name: "language",
+              title: "Programming Language",
+              description: "The programming language of the code",
+              required: true,
+            },
+            {
+              name: "context",
+              title: "Context",
+              description: "Additional context for the review",
+              required: false,
+            }
+          ],
+          _meta: { created: new Date().toISOString() },
+        },
+        {
+          name: "simple-prompt",
+          title: "Simple Prompt",
+          description: "A basic prompt without arguments",
+          _meta: { created: new Date().toISOString() },
+        },
+      ];
       
       // Simple pagination implementation
       const pageSize = 10;
@@ -45,13 +75,12 @@ export function registerListPrompts(server: McpServer) {
       const prompts = allPrompts.slice(startIndex, endIndex);
       
       const result: ListPromptsResult = {
-        prompts: prompts.map(prompt => ({
-          name: prompt.name,
-          title: prompt.title,
-          description: prompt.description,
-          arguments: prompt.arguments,
-          _meta: prompt._meta,
-        })),
+        prompts,
+        _meta: {
+          totalCount: allPrompts.length,
+          pageSize,
+          startIndex,
+        },
       };
       
       // Add pagination cursor if there are more results

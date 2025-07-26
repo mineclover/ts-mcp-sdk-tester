@@ -1,115 +1,81 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { GetPromptRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  GetPromptRequest, 
-  GetPromptResult
-} from "../../spec/mcp_spec.js";
-
-const GetPromptParamsSchema = z.object({
-  name: z.string(),
-  arguments: z.object({}).passthrough().optional(),
-  _meta: z.object({}).passthrough().optional(),
-});
+  GetPromptResult,
+  PromptMessage,
+  ContentBlock
+} from "../../spec/current_spec.js";
 
 /**
  * Registers the prompts/get endpoint handler
  * Gets a specific prompt by name with optional arguments for templating
  */
 export function registerGetPrompt(server: McpServer) {
-  server.request(
-    {
-      method: "prompts/get",
-      schema: {
-        params: GetPromptParamsSchema,
-      },
-    },
+  server.server.setRequestHandler(
+    GetPromptRequestSchema,
     async (request): Promise<GetPromptResult> => {
       const { name, arguments: args } = request.params;
       
-      // Find the prompt handler in the server
-      const promptHandler = (server as any)._prompts.get(name);
+      // Sample prompt templates
+      let description: string;
+      let messages: PromptMessage[];
       
-      if (!promptHandler) {
+      if (name === "greeting") {
+        const nameArg = args?.name || "World";
+        description = "A friendly greeting prompt";
+        messages = [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: `Hello, ${nameArg}! How are you today?`,
+            } as ContentBlock,
+          }
+        ];
+      } else if (name === "code-review") {
+        const language = args?.language || "JavaScript";
+        const context = args?.context || "general code review";
+        description = "A code review prompt template";
+        messages = [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: `Please review this ${language} code. Context: ${context}\n\nPlease check for:
+- Code quality and best practices
+- Potential bugs or issues  
+- Performance considerations
+- Security concerns
+- Documentation completeness`,
+            } as ContentBlock,
+          }
+        ];
+      } else if (name === "simple-prompt") {
+        description = "A simple static prompt";
+        messages = [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: "This is a simple prompt without any templating.",
+            } as ContentBlock,
+          }
+        ];
+      } else {
         throw new Error(`Prompt not found: ${name}`);
       }
       
-      try {
-        // Call the prompt handler with arguments
-        const promptResult = await promptHandler.handler(args || {});
-        
-        // Ensure the result has the correct structure
-        if (!promptResult || typeof promptResult !== 'object') {
-          throw new Error(`Invalid prompt result for: ${name}`);
-        }
-        
-        // Handle different prompt result formats
-        let description: string | undefined;
-        let messages: any[] = [];
-        
-        if ('description' in promptResult) {
-          description = promptResult.description;
-        }
-        
-        if ('messages' in promptResult && Array.isArray(promptResult.messages)) {
-          messages = promptResult.messages;
-        } else if ('message' in promptResult) {
-          // Single message format
-          messages = [promptResult.message];
-        } else if ('content' in promptResult) {
-          // Content format - wrap in a message
-          messages = [{
-            role: 'user',
-            content: promptResult.content
-          }];
-        } else if (typeof promptResult === 'string') {
-          // Plain string format
-          messages = [{
-            role: 'user',
-            content: {
-              type: 'text',
-              text: promptResult
-            }
-          }];
-        }
-        
-        // Validate messages format
-        messages = messages.map(msg => {
-          if (typeof msg === 'string') {
-            return {
-              role: 'user',
-              content: {
-                type: 'text',
-                text: msg
-              }
-            };
-          }
-          
-          if (msg && typeof msg === 'object') {
-            // Ensure role is set
-            if (!msg.role) {
-              msg.role = 'user';
-            }
-            
-            // Ensure content is in the correct format
-            if (typeof msg.content === 'string') {
-              msg.content = {
-                type: 'text',
-                text: msg.content
-              };
-            }
-          }
-          
-          return msg;
-        });
-        
-        return {
-          description,
-          messages,
-        };
-        
-      } catch (error) {
-        throw new Error(`Failed to get prompt ${name}: ${error instanceof Error ? error.message : String(error)}`);
-      }
+      const result: GetPromptResult = {
+        description,
+        messages,
+        _meta: {
+          promptName: name,
+          generatedAt: new Date().toISOString(),
+          arguments: args,
+        },
+      };
+      
+      return result;
     }
   );
 }

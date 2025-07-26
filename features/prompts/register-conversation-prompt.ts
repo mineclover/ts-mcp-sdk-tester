@@ -35,10 +35,10 @@ export function registerRegisterConversationPrompt(server: McpServer) {
           (args: any) => ({
             messages: [
               {
-                role: "system" as const,
+                role: "user" as const,
                 content: {
                   type: "text" as const,
-                  text: systemMessage,
+                  text: `System instructions: ${systemMessage}`,
                 },
               },
               {

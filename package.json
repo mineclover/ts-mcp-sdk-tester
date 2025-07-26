@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "build": "mkdir -p dist && bun build --compile --outfile=dist/$npm_package_name index.ts",
+    "dev": "bun --watch index.ts",
     "show-package-name": "echo $npm_package_name",
     "format": "biome format --write .",
     "format:check": "biome format .",

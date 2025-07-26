@@ -1,50 +1,21 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { InitializeRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  InitializeRequest, 
   InitializeResult,
-  ClientCapabilities,
   ServerCapabilities,
   Implementation
-} from "../../spec/mcp_spec.js";
-import { LATEST_PROTOCOL_VERSION } from "../../spec/mcp_spec.js";
-
-const ImplementationSchema = z.object({
-  name: z.string(),
-  title: z.optional(z.string()),
-  version: z.string(),
-});
-
-const ClientCapabilitiesSchema = z.object({
-  experimental: z.optional(z.object({}).passthrough()),
-  roots: z.optional(z.object({
-    listChanged: z.optional(z.boolean()),
-  }).passthrough()),
-  sampling: z.optional(z.object({}).passthrough()),
-  elicitation: z.optional(z.object({}).passthrough()),
-});
-
-const InitializeParamsSchema = z.object({
-  protocolVersion: z.string(),
-  capabilities: ClientCapabilitiesSchema,
-  clientInfo: ImplementationSchema,
-  _meta: z.object({}).passthrough().optional(),
-});
+} from "../../spec/current_spec.js";
+import { LATEST_PROTOCOL_VERSION } from "../../spec/current_spec.js";
 
 /**
  * Registers the initialize endpoint handler
  * Handles client initialization requests
  */
 export function registerInitialize(server: McpServer) {
-  server.request(
-    {
-      method: "initialize",
-      schema: {
-        params: InitializeParamsSchema,
-      },
-    },
+  server.server.setRequestHandler(
+    InitializeRequestSchema,
     async (request): Promise<InitializeResult> => {
-      const { protocolVersion, capabilities, clientInfo } = request.params;
+      const { protocolVersion, clientInfo } = request.params;
       
       // Validate protocol version compatibility
       const supportedVersions = [

@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerInitialize } from "./initialize.js";
+import { registerInitialized } from "./initialized.js";
 
 /**
  * Authentication & Initialization Features
@@ -9,4 +10,5 @@ import { registerInitialize } from "./initialize.js";
 export function registerAuthFeatures(server: McpServer) {
   // Register auth/initialization endpoints
   registerInitialize(server);
+  registerInitialized(server);
 }

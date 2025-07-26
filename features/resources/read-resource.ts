@@ -1,108 +1,87 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  ReadResourceRequest, 
   ReadResourceResult,
   TextResourceContents,
   BlobResourceContents
-} from "../../spec/mcp_spec.js";
-
-const ReadResourceParamsSchema = z.object({
-  uri: z.string(),
-  _meta: z.object({}).passthrough().optional(),
-});
+} from "../../spec/current_spec.js";
 
 /**
  * Registers the resources/read endpoint handler
  * Reads the content of a specific resource by URI
  */
 export function registerReadResource(server: McpServer) {
-  server.request(
-    {
-      method: "resources/read",
-      schema: {
-        params: ReadResourceParamsSchema,
-      },
-    },
+  server.server.setRequestHandler(
+    ReadResourceRequestSchema,
     async (request): Promise<ReadResourceResult> => {
       const { uri } = request.params;
       
-      // Find the resource handler in the server
-      const resourceHandler = (server as any)._resources.get(uri);
+      // Sample resource data based on URI
+      let contents: (TextResourceContents | BlobResourceContents)[];
       
-      if (!resourceHandler) {
+      if (uri === "test://resource1") {
+        contents = [{
+          uri,
+          text: "This is the content of test resource 1.\nIt contains sample text data.",
+          mimeType: "text/plain",
+          _meta: { 
+            readTime: new Date().toISOString(),
+            size: 54,
+          },
+        }];
+      } else if (uri === "test://resource2") {
+        contents = [{
+          uri,
+          text: JSON.stringify({
+            message: "This is test resource 2",
+            data: { 
+              value: 42, 
+              active: true,
+              timestamp: new Date().toISOString(),
+            }
+          }, null, 2),
+          mimeType: "application/json",
+          _meta: { 
+            readTime: new Date().toISOString(),
+            size: 120,
+          },
+        }];
+      } else if (uri.startsWith("file:///")) {
+        // Sample file resource
+        const filename = uri.split("/").pop() || "unknown";
+        contents = [{
+          uri,
+          text: `Content of file: ${filename}\nThis is simulated file content.`,
+          mimeType: "text/plain",
+          _meta: { 
+            readTime: new Date().toISOString(),
+            filename,
+          },
+        }];
+      } else if (uri.startsWith("api:///")) {
+        // Sample API resource
+        contents = [{
+          uri,
+          blob: Buffer.from("Sample binary data from API").toString("base64"),
+          mimeType: "application/octet-stream",
+          _meta: { 
+            readTime: new Date().toISOString(),
+            apiEndpoint: uri,
+          },
+        }];
+      } else {
         throw new Error(`Resource not found: ${uri}`);
       }
       
-      try {
-        // Call the resource handler to get the content
-        const resourceData = await resourceHandler.handler();
-        
-        // Handle different content types
-        const contents: (TextResourceContents | BlobResourceContents)[] = [];
-        
-        if (Array.isArray(resourceData)) {
-          // Multiple resources returned
-          for (const item of resourceData) {
-            if (typeof item === 'string') {
-              contents.push({
-                uri,
-                text: item,
-                mimeType: 'text/plain',
-              });
-            } else if (item && typeof item === 'object') {
-              if ('text' in item) {
-                contents.push({
-                  uri: item.uri || uri,
-                  text: item.text,
-                  mimeType: item.mimeType || 'text/plain',
-                  _meta: item._meta,
-                });
-              } else if ('blob' in item) {
-                contents.push({
-                  uri: item.uri || uri,
-                  blob: item.blob,
-                  mimeType: item.mimeType || 'application/octet-stream',
-                  _meta: item._meta,
-                });
-              }
-            }
-          }
-        } else if (typeof resourceData === 'string') {
-          // Single text resource
-          contents.push({
-            uri,
-            text: resourceData,
-            mimeType: 'text/plain',
-          });
-        } else if (resourceData && typeof resourceData === 'object') {
-          // Single structured resource
-          if ('text' in resourceData) {
-            contents.push({
-              uri: resourceData.uri || uri,
-              text: resourceData.text,
-              mimeType: resourceData.mimeType || 'text/plain',
-              _meta: resourceData._meta,
-            });
-          } else if ('blob' in resourceData) {
-            contents.push({
-              uri: resourceData.uri || uri,
-              blob: resourceData.blob,
-              mimeType: resourceData.mimeType || 'application/octet-stream',
-              _meta: resourceData._meta,
-            });
-          }
-        }
-        
-        if (contents.length === 0) {
-          throw new Error(`Unable to read resource content for: ${uri}`);
-        }
-        
-        return { contents };
-        
-      } catch (error) {
-        throw new Error(`Failed to read resource ${uri}: ${error instanceof Error ? error.message : String(error)}`);
-      }
+      const result: ReadResourceResult = {
+        contents,
+        _meta: {
+          readTime: new Date().toISOString(),
+          requestedUri: uri,
+        },
+      };
+      
+      return result;
     }
   );
 }

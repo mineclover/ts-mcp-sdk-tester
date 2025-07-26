@@ -1,46 +1,18 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { CreateMessageRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  CreateMessageRequest, 
   CreateMessageResult,
   SamplingMessage,
   ModelPreferences
-} from "../../spec/mcp_spec.js";
-
-const CreateMessageParamsSchema = z.object({
-  messages: z.array(z.object({
-    role: z.enum(["user", "assistant"]),
-    content: z.any(), // ContentBlock can be text, image, or audio
-  })),
-  modelPreferences: z.object({
-    hints: z.optional(z.array(z.object({
-      name: z.optional(z.string()),
-    }))),
-    costPriority: z.optional(z.number().min(0).max(1)),
-    speedPriority: z.optional(z.number().min(0).max(1)),
-    intelligencePriority: z.optional(z.number().min(0).max(1)),
-  }).optional(),
-  systemPrompt: z.string().optional(),
-  includeContext: z.enum(["none", "thisServer", "allServers"]).optional(),
-  temperature: z.number().optional(),
-  maxTokens: z.number(),
-  stopSequences: z.array(z.string()).optional(),
-  metadata: z.object({}).passthrough().optional(),
-  _meta: z.object({}).passthrough().optional(),
-});
+} from "../../spec/current_spec.js";
 
 /**
  * Registers the sampling/createMessage endpoint handler
  * Requests the client to sample from an LLM with the provided messages
  */
 export function registerCreateMessage(server: McpServer) {
-  server.request(
-    {
-      method: "sampling/createMessage",
-      schema: {
-        params: CreateMessageParamsSchema,
-      },
-    },
+  server.server.setRequestHandler(
+    CreateMessageRequestSchema,
     async (request): Promise<CreateMessageResult> => {
       const { 
         messages, 

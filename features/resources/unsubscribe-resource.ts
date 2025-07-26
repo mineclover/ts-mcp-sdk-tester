@@ -1,40 +1,47 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { UnsubscribeRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  UnsubscribeRequest, 
   EmptyResult
-} from "../../spec/mcp_spec.js";
+} from "../../spec/current_spec.js";
 
-const UnsubscribeParamsSchema = z.object({
-  uri: z.string(),
-  _meta: z.object({}).passthrough().optional(),
-});
+// Import the same subscription storage used in subscribe
+// In a real implementation, this would be a shared service
+const resourceSubscriptions = new Set<string>();
 
 /**
  * Registers the resources/unsubscribe endpoint handler
  * Unsubscribes from updates for a specific resource
  */
 export function registerUnsubscribeResource(server: McpServer) {
-  server.request(
-    {
-      method: "resources/unsubscribe",
-      schema: {
-        params: UnsubscribeParamsSchema,
-      },
-    },
+  server.server.setRequestHandler(
+    UnsubscribeRequestSchema,
     async (request): Promise<EmptyResult> => {
       const { uri } = request.params;
       
-      // Initialize subscriptions map if it doesn't exist
-      if (!(server as any)._resourceSubscriptions) {
-        (server as any)._resourceSubscriptions = new Set<string>();
+      // Validate URI format
+      if (!uri || typeof uri !== 'string') {
+        throw new Error('Invalid URI provided for unsubscription');
       }
       
+      // Check if actually subscribed
+      const wasSubscribed = resourceSubscriptions.has(uri);
+      
       // Remove the URI from subscriptions
-      (server as any)._resourceSubscriptions.delete(uri);
+      resourceSubscriptions.delete(uri);
+      
+      console.log(`Unsubscribed from resource: ${uri} (was subscribed: ${wasSubscribed})`);
       
       // Return empty result indicating success
-      return {};
+      const result: EmptyResult = {
+        _meta: {
+          unsubscriptionTime: new Date().toISOString(),
+          unsubscribedUri: uri,
+          wasSubscribed,
+          remainingSubscriptions: resourceSubscriptions.size,
+        },
+      };
+      
+      return result;
     }
   );
 }

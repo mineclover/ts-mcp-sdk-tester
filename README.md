@@ -138,3 +138,13 @@ The server provides comprehensive testing tools for all MCP SDK features:
 # Install the command to $HOME/bin or your preferred path
 cp dist/$package_name $HOME/bin/
 ```
+
+
+ps aux | grep 75860
+로 선택한 PID의 세션 아이디 얻고
+ps -t s019 
+로 세부 PID 얻은 다음
+ps -o pid,stat,command -p 43536
+로 커멘드 실행된 얻어볼 수 있는데
+
+그 다음

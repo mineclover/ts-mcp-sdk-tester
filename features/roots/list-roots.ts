@@ -1,26 +1,16 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { ListRootsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  ListRootsRequest, 
   ListRootsResult
-} from "../../spec/mcp_spec.js";
-
-const ListRootsParamsSchema = z.object({
-  _meta: z.object({}).passthrough().optional(),
-}).optional();
+} from "../../spec/current_spec.js";
 
 /**
  * Registers the roots/list endpoint handler
  * Requests a list of root URIs from the client
  */
 export function registerListRoots(server: McpServer) {
-  server.request(
-    {
-      method: "roots/list",
-      schema: {
-        params: ListRootsParamsSchema,
-      },
-    },
+  server.server.setRequestHandler(
+    ListRootsRequestSchema,
     async (request): Promise<ListRootsResult> => {
       // This is a server-to-client request, so in a real implementation,
       // the server would send this request to the client to get available roots.

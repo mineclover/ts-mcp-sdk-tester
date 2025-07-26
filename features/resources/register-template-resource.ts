@@ -20,11 +20,18 @@ export function registerRegisterTemplateResource(server: McpServer) {
         const template = new ResourceTemplate(templateUri, {
           list: async () => {
             // Return a list of available resources for this template
-            return [
+            const resources = [
               { uri: templateUri.replace("{id}", "1"), name: `${name} 1` },
               { uri: templateUri.replace("{id}", "2"), name: `${name} 2` },
               { uri: templateUri.replace("{id}", "3"), name: `${name} 3` },
             ];
+            return {
+              resources,
+              _meta: {
+                total: resources.length,
+                templateUri,
+              },
+            };
           },
           complete: {
             id: async (value: string) => {

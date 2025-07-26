@@ -1,64 +1,17 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  ElicitRequest, 
   ElicitResult,
   PrimitiveSchemaDefinition
-} from "../../spec/mcp_spec.js";
-
-const PrimitiveSchemaSchema = z.union([
-  z.object({
-    type: z.literal("string"),
-    title: z.optional(z.string()),
-    description: z.optional(z.string()),
-    minLength: z.optional(z.number()),
-    maxLength: z.optional(z.number()),
-    format: z.optional(z.enum(["email", "uri", "date", "date-time"])),
-  }),
-  z.object({
-    type: z.union([z.literal("number"), z.literal("integer")]),
-    title: z.optional(z.string()),
-    description: z.optional(z.string()),
-    minimum: z.optional(z.number()),
-    maximum: z.optional(z.number()),
-  }),
-  z.object({
-    type: z.literal("boolean"),
-    title: z.optional(z.string()),
-    description: z.optional(z.string()),
-    default: z.optional(z.boolean()),
-  }),
-  z.object({
-    type: z.literal("string"),
-    title: z.optional(z.string()),
-    description: z.optional(z.string()),
-    enum: z.array(z.string()),
-    enumNames: z.optional(z.array(z.string())),
-  }),
-]);
-
-const ElicitParamsSchema = z.object({
-  message: z.string(),
-  requestedSchema: z.object({
-    type: z.literal("object"),
-    properties: z.record(PrimitiveSchemaSchema),
-    required: z.optional(z.array(z.string())),
-  }),
-  _meta: z.object({}).passthrough().optional(),
-});
+} from "../../spec/current_spec.js";
 
 /**
  * Registers the elicitation/create endpoint handler
  * Requests additional information from the user via the client
  */
 export function registerCreateElicitation(server: McpServer) {
-  server.request(
-    {
-      method: "elicitation/create",
-      schema: {
-        params: ElicitParamsSchema,
-      },
-    },
+  server.server.setRequestHandler(
+    ElicitRequestSchema,
     async (request): Promise<ElicitResult> => {
       const { message, requestedSchema } = request.params;
       
@@ -72,26 +25,37 @@ export function registerCreateElicitation(server: McpServer) {
       if (requestedSchema.properties) {
         for (const [key, schema] of Object.entries(requestedSchema.properties)) {
           // Generate simulated values based on schema type
-          if (schema.type === "string") {
-            if ('enum' in schema && schema.enum) {
-              simulatedContent[key] = schema.enum[0];
-            } else if (schema.format === "email") {
-              simulatedContent[key] = "test@example.com";
-            } else if (schema.format === "uri") {
-              simulatedContent[key] = "https://example.com";
-            } else if (schema.format === "date") {
-              simulatedContent[key] = "2024-01-01";
-            } else if (schema.format === "date-time") {
-              simulatedContent[key] = "2024-01-01T00:00:00Z";
-            } else {
-              simulatedContent[key] = `simulated_${key}`;
+          if (typeof schema === 'object' && schema !== null) {
+            if (schema.type === "string") {
+              if ('enum' in schema && Array.isArray(schema.enum)) {
+                simulatedContent[key] = schema.enum[0];
+              } else if ('format' in schema) {
+                switch (schema.format) {
+                  case "email":
+                    simulatedContent[key] = "test@example.com";
+                    break;
+                  case "uri":
+                    simulatedContent[key] = "https://example.com";
+                    break;
+                  case "date":
+                    simulatedContent[key] = "2024-01-01";
+                    break;
+                  case "date-time":
+                    simulatedContent[key] = "2024-01-01T00:00:00Z";
+                    break;
+                  default:
+                    simulatedContent[key] = `simulated_${key}`;
+                }
+              } else {
+                simulatedContent[key] = `simulated_${key}`;
+              }
+            } else if (schema.type === "number" || schema.type === "integer") {
+              const min = ('minimum' in schema && typeof schema.minimum === 'number') ? schema.minimum : 0;
+              const max = ('maximum' in schema && typeof schema.maximum === 'number') ? schema.maximum : 100;
+              simulatedContent[key] = Math.floor(Math.random() * (max - min + 1)) + min;
+            } else if (schema.type === "boolean") {
+              simulatedContent[key] = ('default' in schema && typeof schema.default === 'boolean') ? schema.default : true;
             }
-          } else if (schema.type === "number" || schema.type === "integer") {
-            const min = 'minimum' in schema ? (schema.minimum || 0) : 0;
-            const max = 'maximum' in schema ? (schema.maximum || 100) : 100;
-            simulatedContent[key] = Math.floor(Math.random() * (max - min + 1)) + min;
-          } else if (schema.type === "boolean") {
-            simulatedContent[key] = 'default' in schema ? (schema.default || false) : true;
           }
         }
       }

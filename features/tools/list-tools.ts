@@ -1,33 +1,110 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  ListToolsRequest, 
   ListToolsResult,
-  PaginatedRequest
-} from "../../spec/mcp_spec.js";
-
-const ListToolsParamsSchema = z.object({
-  cursor: z.string().optional(),
-  _meta: z.object({}).passthrough().optional(),
-}).optional();
+  Tool
+} from "../../spec/current_spec.js";
 
 /**
  * Registers the tools/list endpoint handler
  * Returns a list of all available tools from the server
  */
 export function registerListTools(server: McpServer) {
-  server.request(
-    {
-      method: "tools/list",
-      schema: {
-        params: ListToolsParamsSchema,
-      },
-    },
+  server.server.setRequestHandler(
+    ListToolsRequestSchema,
     async (request): Promise<ListToolsResult> => {
       const { cursor } = request.params || {};
       
-      // Get all registered tools from the server
-      const allTools = Array.from((server as any)._tools.values());
+      // Sample tools for demonstration
+      const allTools: Tool[] = [
+        {
+          name: "echo",
+          title: "Echo Tool",
+          description: "Echoes back the input message",
+          inputSchema: {
+            type: "object",
+            properties: {
+              message: {
+                type: "string",
+                description: "The message to echo back"
+              }
+            },
+            required: ["message"]
+          },
+          annotations: {
+            title: "Echo Tool",
+            readOnlyHint: true,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: false,
+          },
+          _meta: { created: new Date().toISOString() },
+        },
+        {
+          name: "calculator",
+          title: "Calculator Tool",
+          description: "Performs basic mathematical calculations",
+          inputSchema: {
+            type: "object",
+            properties: {
+              operation: {
+                type: "string",
+                description: "The operation to perform (add, subtract, multiply, divide)"
+              },
+              a: {
+                type: "number",
+                description: "First number"
+              },
+              b: {
+                type: "number", 
+                description: "Second number"
+              }
+            },
+            required: ["operation", "a", "b"]
+          },
+          outputSchema: {
+            type: "object",
+            properties: {
+              result: {
+                type: "number",
+                description: "The calculation result"
+              }
+            },
+            required: ["result"]
+          },
+          annotations: {
+            title: "Calculator",
+            readOnlyHint: true,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: false,
+          },
+          _meta: { created: new Date().toISOString() },
+        },
+        {
+          name: "file-info",
+          title: "File Information Tool",
+          description: "Gets information about a file",
+          inputSchema: {
+            type: "object",
+            properties: {
+              filepath: {
+                type: "string",
+                description: "Path to the file to analyze"
+              }
+            },
+            required: ["filepath"]
+          },
+          annotations: {
+            title: "File Info",
+            readOnlyHint: true,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: true,
+          },
+          _meta: { created: new Date().toISOString() },
+        },
+      ];
       
       // Simple pagination implementation
       const pageSize = 10;
@@ -45,15 +122,12 @@ export function registerListTools(server: McpServer) {
       const tools = allTools.slice(startIndex, endIndex);
       
       const result: ListToolsResult = {
-        tools: tools.map(tool => ({
-          name: tool.name,
-          title: tool.title,
-          description: tool.description,
-          inputSchema: tool.inputSchema,
-          outputSchema: tool.outputSchema,
-          annotations: tool.annotations,
-          _meta: tool._meta,
-        })),
+        tools,
+        _meta: {
+          totalCount: allTools.length,
+          pageSize,
+          startIndex,
+        },
       };
       
       // Add pagination cursor if there are more results

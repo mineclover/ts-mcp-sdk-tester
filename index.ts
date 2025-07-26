@@ -13,6 +13,8 @@ import { registerSamplingFeatures } from "./features/sampling/index.js";
 import { registerElicitationFeatures } from "./features/elicitation/index.js";
 import { registerRootsFeatures } from "./features/roots/index.js";
 import { registerAuthFeatures } from "./features/auth/index.js";
+import { registerLoggingFeatures } from "./features/logging/index.js";
+import { registerCompletionFeatures } from "./features/completion/index.js";
 
 /**
  * MCP SDK Tester - A comprehensive testing server for MCP SDK features
@@ -27,7 +29,26 @@ function createServer() {
       name: "MCP SDK Tester",
       version: "1.0.0",
     },
-    { capabilities: { logging: {} } }
+    { 
+      capabilities: { 
+        logging: {},
+        completions: {},
+        resources: {
+          subscribe: true,
+          listChanged: true,
+        },
+        prompts: {
+          listChanged: true,
+        },
+        tools: {
+          listChanged: true,
+        },
+        sampling: {},
+        roots: {
+          listChanged: true,
+        },
+      } 
+    }
   );
 
   // Register all modular features
@@ -45,6 +66,8 @@ function createServer() {
   registerElicitationFeatures(server);
   registerRootsFeatures(server);
   registerAuthFeatures(server);
+  registerLoggingFeatures(server);
+  registerCompletionFeatures(server);
 
   // Add comprehensive test tool
   server.registerTool(
@@ -69,7 +92,7 @@ function createServer() {
             title: "Test Resource",
             description: "Test resource for comprehensive testing",
           },
-          async (uri: any) => ({
+          async (uri: URL) => ({
             contents: [{ uri: uri.href, text: "Test content" }],
           })
         );

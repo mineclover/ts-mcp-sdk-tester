@@ -4,12 +4,12 @@
     "": {
       "name": "bun-mcp-server",
       "dependencies": {
-        "@biomejs/biome": "^2.1.2",
         "@modelcontextprotocol/sdk": "^1.17.0",
         "cors": "^2.8.5",
         "express": "^4.21.2",
       },
       "devDependencies": {
+        "@biomejs/biome": "^2.1.2",
         "@types/bun": "latest",
         "@types/cors": "^2.8.19",
         "@types/express": "^5.0.3",

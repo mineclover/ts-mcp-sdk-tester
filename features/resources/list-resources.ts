@@ -1,31 +1,41 @@
-import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ListResourcesRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  ListResourcesResult
-} from "../../spec/mcp_spec.js";
-
-const ListResourcesParamsSchema = z.object({
-  cursor: z.string().optional(),
-  _meta: z.object({}).passthrough().optional(),
-}).optional();
+  ListResourcesResult,
+  Resource
+} from "../../spec/current_spec.js";
 
 /**
  * Registers the resources/list endpoint handler
  * Returns a list of all available resources from the server
  */
-export function registerListResources(server: Server) {
-  server.setRequestHandler(
-    {
-      method: "resources/list",
-      schema: {
-        params: ListResourcesParamsSchema,
-      },
-    },
+export function registerListResources(server: McpServer) {
+  server.server.setRequestHandler(
+    ListResourcesRequestSchema,
     async (request): Promise<ListResourcesResult> => {
       const { cursor } = request.params || {};
       
-      // Get all registered resources from the server
-      const allResources: any[] = [];
+      // Sample resources for demonstration
+      const allResources: Resource[] = [
+        {
+          name: "test-resource-1",
+          title: "Test Resource 1",
+          uri: "test://resource1",
+          description: "A sample test resource for demonstration",
+          mimeType: "text/plain",
+          size: 100,
+          _meta: { created: new Date().toISOString() },
+        },
+        {
+          name: "test-resource-2", 
+          title: "Test Resource 2",
+          uri: "test://resource2",
+          description: "Another sample test resource",
+          mimeType: "application/json",
+          size: 200,
+          _meta: { created: new Date().toISOString() },
+        },
+      ];
       
       // Simple pagination implementation
       const pageSize = 10;
@@ -43,16 +53,12 @@ export function registerListResources(server: Server) {
       const resources = allResources.slice(startIndex, endIndex);
       
       const result: ListResourcesResult = {
-        resources: resources.map(resource => ({
-          name: resource.name,
-          title: resource.title,
-          uri: resource.uri,
-          description: resource.description,
-          mimeType: resource.mimeType,
-          annotations: resource.annotations,
-          size: resource.size,
-          _meta: resource._meta,
-        })),
+        resources,
+        _meta: {
+          totalCount: allResources.length,
+          pageSize,
+          startIndex,
+        },
       };
       
       // Add pagination cursor if there are more results
