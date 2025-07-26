@@ -109,6 +109,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
 
   // Store transports by session ID
   const transports: Record<string, StreamableHTTPServerTransport> = {};
+  let serverShuttingDown = false;
 
   // Modern Streamable HTTP endpoint
   app.all("/mcp", async (req: Request, res: Response) => {
@@ -134,11 +135,15 @@ function setupStreamableTransport(server: McpServer, port: number) {
       if (sessionId && transports[sessionId]) {
         // Reuse existing transport
         transport = transports[sessionId];
-      } else if (!sessionId && req.method === "POST") {
+      } else if (!sessionId && req.method === "POST" && !serverShuttingDown) {
         // Create new transport for initialization
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (sessionId) => {
+            if (serverShuttingDown) {
+              logger.warning(`Session ${sessionId} initialized during shutdown, will be closed`, "transport");
+              return;
+            }
             logger.info(`Streamable HTTP session initialized: ${sessionId}`, "transport");
             transports[sessionId] = transport;
           },
@@ -155,6 +160,18 @@ function setupStreamableTransport(server: McpServer, port: number) {
 
         // Connect to MCP server
         await server.connect(transport);
+      } else if (serverShuttingDown) {
+        // Reject new connections during shutdown
+        const errorCode = getErrorCode(ErrorType.INTERNAL_ERROR);
+        res.status(503).json({
+          jsonrpc: APP_CONFIG.jsonrpc,
+          error: {
+            code: errorCode,
+            message: "Server is shutting down",
+          },
+          id: null,
+        });
+        return;
       } else {
         // Invalid request
         const errorCode = getErrorCode(ErrorType.INVALID_REQUEST);
@@ -309,18 +326,27 @@ function setupStreamableTransport(server: McpServer, port: number) {
     logger.info("Server bound to localhost for security", "transport");
   });
 
-  // Integrate with lifecycle management for graceful shutdown
+  // Register cleanup with lifecycle management for graceful shutdown
   lifecycleManager.onShutdown(async () => {
     logger.info("Shutting down Streamable HTTP server...", "transport");
+    serverShuttingDown = true;
     
     // Close all active transports
-    Object.values(transports).forEach(transport => {
+    const transportIds = Object.keys(transports);
+    for (const sessionId of transportIds) {
       try {
-        transport.close();
+        const transport = transports[sessionId];
+        if (transport) {
+          logger.debug(`Closing transport session: ${sessionId}`, "transport");
+          transport.close();
+          delete transports[sessionId];
+        }
       } catch (error) {
-        logger.warning(`Error closing transport: ${error}`, "transport");
+        logger.warning(`Error closing transport session ${sessionId}: ${error}`, "transport");
       }
-    });
+    }
+    
+    logger.info(`Closed ${transportIds.length} transport sessions`, "transport");
     
     // Close HTTP server
     return new Promise<void>((resolve) => {

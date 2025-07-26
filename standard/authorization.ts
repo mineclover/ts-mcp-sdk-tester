@@ -73,53 +73,59 @@ export function createRateLimiter(maxRequests: number = 100, windowMs: number = 
   const clients = new Map<string, { count: number; resetTime: number }>();
   
   return (req: Request, res: Response, next: NextFunction) => {
-    const clientId = req.ip || req.headers['x-forwarded-for'] as string || 'unknown';
-    const now = Date.now();
-    
-    // Clean up expired entries
-    for (const [id, data] of clients.entries()) {
-      if (now > data.resetTime) {
-        clients.delete(id);
+    try {
+      const clientId = req.ip || req.headers['x-forwarded-for'] as string || 'unknown';
+      const now = Date.now();
+      
+      // Clean up expired entries
+      for (const [id, data] of clients.entries()) {
+        if (now > data.resetTime) {
+          clients.delete(id);
+        }
       }
-    }
-    
-    // Get or create client record
-    let clientData = clients.get(clientId);
-    if (!clientData || now > clientData.resetTime) {
-      clientData = { count: 0, resetTime: now + windowMs };
-      clients.set(clientId, clientData);
-    }
-    
-    // Check rate limit
-    if (clientData.count >= maxRequests) {
-      logger.warning(`Rate limit exceeded for client: ${clientId}`, "auth");
-      res.status(429).json({
-        jsonrpc: "2.0",
-        error: {
-          code: -32603, // Internal error
-          message: "Rate limit exceeded",
-          data: {
-            limit: maxRequests,
-            window: windowMs,
-            retryAfter: Math.ceil((clientData.resetTime - now) / 1000),
+      
+      // Get or create client record
+      let clientData = clients.get(clientId);
+      if (!clientData || now > clientData.resetTime) {
+        clientData = { count: 0, resetTime: now + windowMs };
+        clients.set(clientId, clientData);
+      }
+      
+      // Check rate limit
+      if (clientData.count >= maxRequests) {
+        logger.warning(`Rate limit exceeded for client: ${clientId}`, "auth");
+        res.status(429).json({
+          jsonrpc: "2.0",
+          error: {
+            code: -32603, // Internal error
+            message: "Rate limit exceeded",
+            data: {
+              limit: maxRequests,
+              window: windowMs,
+              retryAfter: Math.ceil((clientData.resetTime - now) / 1000),
+            },
           },
-        },
-        id: null,
+          id: null,
+        });
+        return;
+      }
+      
+      // Increment count
+      clientData.count++;
+      
+      // Add rate limiting headers
+      res.set({
+        'X-RateLimit-Limit': maxRequests.toString(),
+        'X-RateLimit-Remaining': (maxRequests - clientData.count).toString(),
+        'X-RateLimit-Reset': new Date(clientData.resetTime).toISOString(),
       });
-      return;
+      
+      next();
+    } catch (error) {
+      logger.error(`Rate limiter error: ${error}`, "auth");
+      // Continue processing on rate limiter error
+      next();
     }
-    
-    // Increment count
-    clientData.count++;
-    
-    // Add rate limiting headers
-    res.set({
-      'X-RateLimit-Limit': maxRequests.toString(),
-      'X-RateLimit-Remaining': (maxRequests - clientData.count).toString(),
-      'X-RateLimit-Reset': new Date(clientData.resetTime).toISOString(),
-    });
-    
-    next();
   };
 }
 
@@ -175,14 +181,14 @@ export function validateMCPRequest(req: Request, res: Response, next: NextFuncti
   
   const serverStatus = getServerStatus();
   
-  // Check if server is operational
-  if (!serverStatus.isOperational) {
-    logger.warning("Request received while server not operational", "auth");
+  // Check if server is in a valid state for processing requests
+  if (serverStatus.state === 'shutting_down' || serverStatus.state === 'shutdown') {
+    logger.warning(`Request received during ${serverStatus.state}`, "auth");
     res.status(503).json({
       jsonrpc: "2.0",
       error: {
         code: -32603,
-        message: "Server not ready",
+        message: "Server is shutting down",
         data: {
           state: serverStatus.state,
           uptime: serverStatus.uptime,
@@ -191,6 +197,12 @@ export function validateMCPRequest(req: Request, res: Response, next: NextFuncti
       id: null,
     });
     return;
+  }
+  
+  // Allow requests during initialization and operational states
+  if (!serverStatus.isOperational && serverStatus.state !== 'initialized') {
+    logger.info(`Request received while server in ${serverStatus.state} state`, "auth");
+    // Continue processing - some requests (like initialize) are needed during initialization
   }
   
   // Validate JSON-RPC structure using type guard

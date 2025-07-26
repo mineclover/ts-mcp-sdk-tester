@@ -15,6 +15,9 @@ export function registerLoggingEndpoints(server: McpServer) {
   logger.initialize(server);
 
   registerSetLevel(server);
+  registerLoggingConfig(server);
+  
+  logger.info("Logging endpoints registered successfully", "logging");
 }
 
 /**
@@ -22,31 +25,121 @@ export function registerLoggingEndpoints(server: McpServer) {
  * Set the logging level that the client wants to receive from the server
  */
 function registerSetLevel(server: McpServer) {
-  server.server.setRequestHandler(SetLevelRequestSchema, async (request): Promise<EmptyResult> => {
+  logger.logMethodEntry("registerSetLevel", undefined, "logging");
+  
+  server.server.setRequestHandler(SetLevelRequestSchema, async (request, extra): Promise<EmptyResult> => {
     const { level } = request.params;
+    
+    await logger.logEndpointEntry("logging/setLevel", extra.requestId, { level });
 
-    // Actually configure the logging level
-    logger.setLevel(level);
+    try {
+      const previousLevel = logger.getLevel();
+      
+      // Actually configure the logging level
+      logger.setLevel(level);
 
-    const result: EmptyResult = {
-      _meta: {
-        loggingLevel: level,
-        levelSetAt: new Date().toISOString(),
-        message: `Logging level set to: ${level}`,
-        previousLevel: logger.getLevel(),
-        severityLevels: [
-          "debug",
-          "info",
-          "notice",
-          "warning",
-          "error",
-          "critical",
-          "alert",
-          "emergency",
-        ],
-      },
-    };
+      const result: EmptyResult = {
+        _meta: {
+          loggingLevel: level,
+          levelSetAt: new Date().toISOString(),
+          message: `Logging level set to: ${level}`,
+          previousLevel,
+          requestId: extra.requestId,
+          severityLevels: [
+            "debug",
+            "info",
+            "notice",
+            "warning",
+            "error",
+            "critical",
+            "alert",
+            "emergency",
+          ],
+        },
+      };
 
-    return result;
+      await logger.logMethodExit("logging/setLevel", {
+        requestId: extra.requestId,
+        level,
+        previousLevel,
+      }, "logging");
+
+      return result;
+    } catch (error) {
+      await logger.logServerError(
+        error instanceof Error ? error : new Error(String(error)),
+        "logging/setLevel",
+        { requestId: extra.requestId, level }
+      );
+      throw error;
+    }
   });
+}
+
+/**
+ * logging/config endpoint (custom)
+ * Configure additional logging settings
+ */
+function registerLoggingConfig(server: McpServer) {
+  logger.logMethodEntry("registerLoggingConfig", undefined, "logging");
+  
+  // Custom logging configuration endpoint
+  server.server.setRequestHandler(
+    {
+      method: "logging/config",
+      params: {
+        type: "object",
+        properties: {
+          sensitiveDataFilter: { type: "boolean" },
+          rateLimiting: { type: "boolean" },
+        },
+        additionalProperties: false,
+      },
+    } as any,
+    async (request: any, extra: any): Promise<EmptyResult> => {
+      const { sensitiveDataFilter, rateLimiting } = request.params || {};
+      
+      await logger.logEndpointEntry("logging/config", extra.requestId, {
+        sensitiveDataFilter,
+        rateLimiting,
+      });
+
+      try {
+        const config: any = {};
+        
+        if (typeof sensitiveDataFilter === 'boolean') {
+          logger.setSensitiveDataFilter(sensitiveDataFilter);
+          config.sensitiveDataFilter = sensitiveDataFilter;
+        }
+        
+        if (typeof rateLimiting === 'boolean') {
+          logger.setRateLimiting(rateLimiting);
+          config.rateLimiting = rateLimiting;
+        }
+
+        const result: EmptyResult = {
+          _meta: {
+            message: "Logging configuration updated",
+            configUpdated: config,
+            timestamp: new Date().toISOString(),
+            requestId: extra.requestId,
+          },
+        };
+
+        await logger.logMethodExit("logging/config", {
+          requestId: extra.requestId,
+          configUpdated: config,
+        }, "logging");
+
+        return result;
+      } catch (error) {
+        await logger.logServerError(
+          error instanceof Error ? error : new Error(String(error)),
+          "logging/config",
+          { requestId: extra.requestId, params: request.params }
+        );
+        throw error;
+      }
+    }
+  );
 }

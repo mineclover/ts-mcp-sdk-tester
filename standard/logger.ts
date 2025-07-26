@@ -11,6 +11,28 @@ import {
 // Define log data type
 type LogData = string | number | boolean | object | null | undefined;
 
+// Sensitive data patterns to filter
+const SENSITIVE_PATTERNS = [
+  /password/i,
+  /secret/i,
+  /token/i,
+  /key/i,
+  /auth/i,
+  /credential/i,
+  /private/i,
+];
+
+// Rate limiting for logging
+interface LogRateLimit {
+  lastLogTime: number;
+  count: number;
+  suppressed: number;
+}
+
+const LOG_RATE_LIMITS = new Map<string, LogRateLimit>();
+const RATE_LIMIT_WINDOW = 1000; // 1 second
+const MAX_LOGS_PER_WINDOW = 10;
+
 // JSON-RPC error code mapping
 export enum ErrorType {
   PARSE_ERROR = "parse_error",
@@ -103,6 +125,8 @@ export class Logger {
   private server: McpServer | null = null;
   private currentLevel: LoggingLevel = "info";
   private isClientConnected = false;
+  private sensitiveDataFilterEnabled = true;
+  private rateLimitingEnabled = true;
 
   // Log level severity mapping (higher number = more severe)
   private static readonly LEVEL_SEVERITY: Record<LoggingLevel, number> = {
@@ -128,8 +152,38 @@ export class Logger {
    * Set the logging level (called from logging/setLevel endpoint)
    */
   setLevel(level: LoggingLevel) {
+    const previousLevel = this.currentLevel;
     this.currentLevel = level;
-    this.info(`Logging level changed to: ${level}`);
+    this.info({
+      message: "Logging level changed",
+      previousLevel,
+      newLevel: level,
+      timestamp: new Date().toISOString(),
+    }, "logger");
+  }
+  
+  /**
+   * Enable or disable sensitive data filtering
+   */
+  setSensitiveDataFilter(enabled: boolean) {
+    this.sensitiveDataFilterEnabled = enabled;
+    this.info({
+      message: "Sensitive data filtering changed",
+      enabled,
+      timestamp: new Date().toISOString(),
+    }, "logger");
+  }
+  
+  /**
+   * Enable or disable rate limiting
+   */
+  setRateLimiting(enabled: boolean) {
+    this.rateLimitingEnabled = enabled;
+    this.info({
+      message: "Log rate limiting changed",
+      enabled,
+      timestamp: new Date().toISOString(),
+    }, "logger");
   }
 
   /**
@@ -192,15 +246,111 @@ export class Logger {
   }
 
   /**
-   * Core logging method
+   * Check if log should be rate limited
    */
-  private async log(level: LoggingLevel, logger: string, data: LogData) {
+  private shouldRateLimit(level: LoggingLevel, logger: string, data: LogData): boolean {
+    if (!this.rateLimitingEnabled) {
+      return false;
+    }
+    
+    // Don't rate limit critical messages
+    if (['critical', 'alert', 'emergency'].includes(level)) {
+      return false;
+    }
+    
+    const key = `${level}:${logger}:${typeof data === 'string' ? data : JSON.stringify(data).substring(0, 50)}`;
+    const now = Date.now();
+    
+    let rateLimit = LOG_RATE_LIMITS.get(key);
+    if (!rateLimit) {
+      rateLimit = { lastLogTime: now, count: 1, suppressed: 0 };
+      LOG_RATE_LIMITS.set(key, rateLimit);
+      return false;
+    }
+    
+    // Reset count if window has passed
+    if (now - rateLimit.lastLogTime > RATE_LIMIT_WINDOW) {
+      if (rateLimit.suppressed > 0) {
+        // Log suppressed count before resetting
+        this.logWithoutRateLimit('warning', logger, {
+          message: 'Log messages were suppressed due to rate limiting',
+          suppressedCount: rateLimit.suppressed,
+          timeWindow: RATE_LIMIT_WINDOW,
+        });
+      }
+      rateLimit.count = 1;
+      rateLimit.suppressed = 0;
+      rateLimit.lastLogTime = now;
+      return false;
+    }
+    
+    // Check if rate limit exceeded
+    if (rateLimit.count >= MAX_LOGS_PER_WINDOW) {
+      rateLimit.suppressed++;
+      return true;
+    }
+    
+    rateLimit.count++;
+    return false;
+  }
+  
+  /**
+   * Filter sensitive data from log messages
+   */
+  private filterSensitiveData(data: LogData): LogData {
+    if (!this.sensitiveDataFilterEnabled) {
+      return data;
+    }
+    
+    if (typeof data === 'string') {
+      // Check if the string itself might be sensitive
+      for (const pattern of SENSITIVE_PATTERNS) {
+        if (pattern.test(data)) {
+          return '[FILTERED_SENSITIVE_DATA]';
+        }
+      }
+      return data;
+    }
+    
+    if (typeof data === 'object' && data !== null) {
+      const filtered: Record<string, unknown> | unknown[] = Array.isArray(data) ? [] : {};
+      
+      for (const [key, value] of Object.entries(data)) {
+        // Check if key is sensitive
+        const isSensitiveKey = SENSITIVE_PATTERNS.some(pattern => pattern.test(key));
+        
+        if (isSensitiveKey) {
+          (filtered as Record<string, unknown>)[key] = '[FILTERED]';
+        } else if (typeof value === 'string') {
+          // Check if value might be sensitive
+          const isSensitiveValue = SENSITIVE_PATTERNS.some(pattern => pattern.test(value));
+          (filtered as Record<string, unknown>)[key] = isSensitiveValue ? '[FILTERED]' : value;
+        } else if (typeof value === 'object' && value !== null) {
+          (filtered as Record<string, unknown>)[key] = this.filterSensitiveData(value);
+        } else {
+          (filtered as Record<string, unknown>)[key] = value;
+        }
+      }
+      
+      return filtered;
+    }
+    
+    return data;
+  }
+  
+  /**
+   * Log without rate limiting (for internal use)
+   */
+  private async logWithoutRateLimit(level: LoggingLevel, logger: string, data: LogData) {
     if (!this.shouldLog(level)) {
       return;
     }
 
+    // Filter sensitive data
+    const filteredData = this.filterSensitiveData(data);
+
     // Always output to console for server-side debugging
-    const consoleMessage = this.formatConsoleMessage(level, logger, data);
+    const consoleMessage = this.formatConsoleMessage(level, logger, filteredData);
 
     // Use appropriate console method based on severity
     switch (level) {
@@ -224,8 +374,20 @@ export class Logger {
 
     // Send to client if connected
     if (this.isClientConnected) {
-      await this.sendToClient(level, logger, data);
+      await this.sendToClient(level, logger, filteredData);
     }
+  }
+  
+  /**
+   * Core logging method with rate limiting and filtering
+   */
+  private async log(level: LoggingLevel, logger: string, data: LogData) {
+    // Check rate limiting
+    if (this.shouldRateLimit(level, logger, data)) {
+      return; // Silently drop the log
+    }
+    
+    await this.logWithoutRateLimit(level, logger, data);
   }
 
   // Convenience methods for each log level

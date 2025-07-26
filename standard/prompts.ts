@@ -11,6 +11,7 @@ import type {
   PromptMessage,
 } from "../spec/current_spec.js";
 import { DEMO_PROMPTS, getDemoPromptMessages } from "../demo/index.js";
+import { logger } from "./logger.js";
 import { paginateArray } from "./pagination-utils.js";
 
 /**
@@ -22,8 +23,12 @@ import { paginateArray } from "./pagination-utils.js";
  */
 
 export function registerPromptsEndpoints(server: McpServer) {
+  logger.logMethodEntry("registerPromptsEndpoints", { serverType: 'McpServer' }, "prompts");
+  
   registerListPrompts(server);
   registerGetPrompt(server);
+  
+  logger.info("All prompt endpoints registered successfully", "prompts");
 }
 
 /**
@@ -31,32 +36,55 @@ export function registerPromptsEndpoints(server: McpServer) {
  * Returns a paginated list of available prompts and prompt templates
  */
 function registerListPrompts(server: McpServer) {
+  logger.logMethodEntry("registerListPrompts", undefined, "prompts");
+  
   server.server.setRequestHandler(
     ListPromptsRequestSchema,
-    async (request): Promise<ListPromptsResult> => {
-      const { cursor } = request.params || {};
-
-      // Demo prompts from separated demo data
-      const allPrompts: Prompt[] = DEMO_PROMPTS;
-
-      // Use MCP-compliant pagination
-      const paginationResult = paginateArray(allPrompts, cursor, {
-        defaultPageSize: 10,
-        maxPageSize: 50,
+    async (request, extra): Promise<ListPromptsResult> => {
+      await logger.logEndpointEntry("prompts/list", extra.requestId, {
+        cursor: request.params?.cursor ? "[present]" : "[none]",
       });
 
-      const result: ListPromptsResult = {
-        prompts: paginationResult.items,
-        nextCursor: paginationResult.nextCursor,
-        _meta: {
-          totalCount: paginationResult._meta.totalCount,
-          pageSize: paginationResult._meta.pageSize,
-          startIndex: paginationResult._meta.startIndex,
-          hasMore: paginationResult._meta.hasMore,
-        },
-      };
+      try {
+        const { cursor } = request.params || {};
 
-      return result;
+        // Demo prompts from separated demo data
+        const allPrompts: Prompt[] = DEMO_PROMPTS;
+        logger.debug(`Loading ${allPrompts.length} total prompts`, "prompts");
+
+        // Use MCP-compliant pagination
+        const paginationResult = paginateArray(allPrompts, cursor, {
+          defaultPageSize: 10,
+          maxPageSize: 50,
+        });
+
+        const result: ListPromptsResult = {
+          prompts: paginationResult.items,
+          nextCursor: paginationResult.nextCursor,
+          _meta: {
+            totalCount: paginationResult._meta?.totalCount,
+            pageSize: paginationResult._meta?.pageSize,
+            startIndex: paginationResult._meta?.startIndex,
+            hasMore: paginationResult._meta?.hasMore,
+          },
+        };
+
+        await logger.logMethodExit("prompts/list", {
+          requestId: extra.requestId,
+          promptCount: result.prompts.length,
+          totalCount: result._meta?.totalCount,
+          hasMore: result._meta?.hasMore,
+        }, "prompts");
+
+        return result;
+      } catch (error) {
+        await logger.logServerError(
+          error instanceof Error ? error : new Error(String(error)),
+          "prompts/list",
+          { requestId: extra.requestId, cursor: request.params?.cursor }
+        );
+        throw error;
+      }
     }
   );
 }
@@ -66,36 +94,65 @@ function registerListPrompts(server: McpServer) {
  * Gets a specific prompt by name with optional templating arguments
  */
 function registerGetPrompt(server: McpServer) {
+  logger.logMethodEntry("registerGetPrompt", undefined, "prompts");
+  
   server.server.setRequestHandler(
     GetPromptRequestSchema,
-    async (request): Promise<GetPromptResult> => {
+    async (request, extra): Promise<GetPromptResult> => {
       const { name, arguments: args } = request.params;
-
-      // Get demo prompt messages from separated demo data
-      let description: string;
-      let messages: PromptMessage[];
+      
+      await logger.logEndpointEntry("prompts/get", extra.requestId, {
+        promptName: name,
+        hasArguments: !!args && Object.keys(args).length > 0,
+      });
 
       try {
-        messages = getDemoPromptMessages(name, args || {});
+        logger.debug(`Getting prompt: ${name}`, "prompts");
         
-        // Find the prompt description from the demo data
-        const prompt = DEMO_PROMPTS.find(p => p.name === name);
-        description = prompt?.description || `Prompt: ${name}`;
-      } catch (error) {
-        throw new Error(`Prompt not found: ${name}`);
-      }
+        // Get demo prompt messages from separated demo data
+        let description: string;
+        let messages: PromptMessage[];
 
-      const result: GetPromptResult = {
-        description,
-        messages,
-        _meta: {
+        try {
+          messages = getDemoPromptMessages(name, args || {});
+          logger.debug(`Generated ${messages.length} messages for prompt: ${name}`, "prompts");
+          
+          // Find the prompt description from the demo data
+          const prompt = DEMO_PROMPTS.find(p => p.name === name);
+          description = prompt?.description || `Prompt: ${name}`;
+        } catch (error) {
+          logger.warning(`Prompt not found: ${name}`, "prompts");
+          throw new Error(`Prompt not found: ${name}`);
+        }
+
+        const result: GetPromptResult = {
+          description,
+          messages,
+          _meta: {
+            promptName: name,
+            generatedAt: new Date().toISOString(),
+            arguments: args,
+            messageCount: messages.length,
+            requestId: extra.requestId,
+          },
+        };
+
+        await logger.logMethodExit("prompts/get", {
+          requestId: extra.requestId,
           promptName: name,
-          generatedAt: new Date().toISOString(),
-          arguments: args,
-        },
-      };
+          messageCount: messages.length,
+          argumentCount: args ? Object.keys(args).length : 0,
+        }, "prompts");
 
-      return result;
+        return result;
+      } catch (error) {
+        await logger.logServerError(
+          error instanceof Error ? error : new Error(String(error)),
+          "prompts/get",
+          { requestId: extra.requestId, promptName: name, arguments: args }
+        );
+        throw error;
+      }
     }
   );
 }

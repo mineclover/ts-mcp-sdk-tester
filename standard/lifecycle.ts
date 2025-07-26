@@ -30,16 +30,27 @@ class LifecycleManager {
    * Initialize lifecycle manager with MCP server
    */
   initialize(server: McpServer) {
+    logger.logMethodEntry("lifecycle.initialize", { 
+      serverType: 'McpServer' 
+    }, "lifecycle");
+    
     this.server = server;
     this.state = LifecycleState.INITIALIZING;
+    
+    logger.debug("Registering lifecycle endpoints", "lifecycle");
     this.registerLifecycleEndpoints(server);
+    
+    logger.debug("Setting up shutdown handlers", "lifecycle");
     this.setupShutdownHandlers();
     
     logger.info({
       message: "Lifecycle manager initialized",
       state: this.state,
       startTime: this.startTime.toISOString(),
+      serverType: 'McpServer',
     }, "lifecycle");
+    
+    logger.logMethodExit("lifecycle.initialize", { state: this.state }, "lifecycle");
   }
 
   /**
@@ -68,6 +79,10 @@ class LifecycleManager {
    */
   onShutdown(handler: () => Promise<void> | void) {
     this.shutdownHandlers.push(handler);
+    logger.debug({
+      message: "Shutdown handler registered",
+      totalHandlers: this.shutdownHandlers.length,
+    }, "lifecycle");
   }
 
   /**
@@ -78,20 +93,34 @@ class LifecycleManager {
       return;
     }
 
+    const previousState = this.state;
     this.state = LifecycleState.SHUTTING_DOWN;
     
     logger.info({
       message: "Initiating graceful shutdown",
       reason,
+      previousState,
       uptime: this.getUptime(),
     }, "lifecycle");
 
     try {
+      // Handle shutdown during different states
+      if (previousState === LifecycleState.INITIALIZING) {
+        logger.warning("Shutdown requested during initialization - will complete gracefully", "lifecycle");
+        // Allow a brief moment for initialization to complete or be interrupted
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
       // Execute shutdown handlers in reverse order (LIFO)
       for (let i = this.shutdownHandlers.length - 1; i >= 0; i--) {
         const handler = this.shutdownHandlers[i];
         try {
-          await handler();
+          await Promise.race([
+            handler(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Shutdown handler timeout')), 5000)
+            )
+          ]);
         } catch (error) {
           logger.error({
             message: "Error in shutdown handler",
@@ -106,6 +135,7 @@ class LifecycleManager {
       logger.info({
         message: "Graceful shutdown completed",
         finalUptime: this.getUptime(),
+        handlersExecuted: this.shutdownHandlers.length,
       }, "lifecycle");
       
     } catch (error) {
@@ -126,18 +156,27 @@ class LifecycleManager {
     server.server.setNotificationHandler(
       InitializedNotificationSchema,
       async (notification) => {
+        if (this.state === LifecycleState.SHUTTING_DOWN || this.state === LifecycleState.SHUTDOWN) {
+          logger.warning("Initialized notification received during shutdown - ignoring", "lifecycle");
+          return;
+        }
+
         logger.info({
           message: "Client initialization complete",
           previousState: this.state,
         }, "lifecycle");
 
-        this.state = LifecycleState.OPERATING;
-        
-        logger.info({
-          message: "Server is now operational",
-          state: this.state,
-          uptime: this.getUptime(),
-        }, "lifecycle");
+        if (this.state === LifecycleState.INITIALIZED) {
+          this.state = LifecycleState.OPERATING;
+          
+          logger.info({
+            message: "Server is now operational",
+            state: this.state,
+            uptime: this.getUptime(),
+          }, "lifecycle");
+        } else {
+          logger.warning(`Initialized notification received in invalid state: ${this.state}`, "lifecycle");
+        }
       }
     );
   }
@@ -146,44 +185,59 @@ class LifecycleManager {
    * Setup system-level shutdown handlers
    */
   private setupShutdownHandlers() {
+    logger.logMethodEntry("lifecycle.setupShutdownHandlers", undefined, "lifecycle");
+    
     // Handle various shutdown signals
     const shutdownSignals = ['SIGINT', 'SIGTERM', 'SIGQUIT'] as const;
     
     shutdownSignals.forEach(signal => {
       process.on(signal, async () => {
-        logger.info({
+        logger.alert({
           message: `Received ${signal} signal`,
           currentState: this.state,
+          uptime: this.getUptime(),
+          signal,
         }, "lifecycle");
         
         await this.shutdown(`${signal} signal received`);
         process.exit(0);
       });
+      
+      logger.debug(`Registered ${signal} signal handler`, "lifecycle");
     });
 
     // Handle uncaught exceptions
     process.on('uncaughtException', async (error) => {
       logger.critical({
-        message: "Uncaught exception",
+        message: "Uncaught exception - initiating emergency shutdown",
         error: error.message,
-        stack: error.stack?.split('\n').slice(0, 3).join('\n'),
+        stack: error.stack?.split('\n').slice(0, 5).join('\n'),
+        state: this.state,
+        uptime: this.getUptime(),
       }, "lifecycle");
       
       await this.shutdown(`Uncaught exception: ${error.message}`);
       process.exit(1);
     });
+    
+    logger.debug("Registered uncaughtException handler", "lifecycle");
 
     // Handle unhandled promise rejections
     process.on('unhandledRejection', async (reason, promise) => {
       logger.critical({
-        message: "Unhandled promise rejection",
+        message: "Unhandled promise rejection - initiating emergency shutdown",
         reason: String(reason),
         promise: String(promise),
+        state: this.state,
+        uptime: this.getUptime(),
       }, "lifecycle");
       
       await this.shutdown(`Unhandled promise rejection: ${String(reason)}`);
       process.exit(1);
     });
+    
+    logger.debug("Registered unhandledRejection handler", "lifecycle");
+    logger.info(`Registered ${shutdownSignals.length} signal handlers + 2 error handlers`, "lifecycle");
   }
 
   /**
@@ -197,6 +251,10 @@ class LifecycleManager {
         message: "Initialization phase completed, waiting for client confirmation",
         state: this.state,
       }, "lifecycle");
+    } else if (this.state === LifecycleState.SHUTTING_DOWN) {
+      logger.warning("Initialize completed during shutdown - ignoring", "lifecycle");
+    } else {
+      logger.warning(`markInitialized called in invalid state: ${this.state}`, "lifecycle");
     }
   }
 }
