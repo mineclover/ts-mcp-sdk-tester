@@ -7,7 +7,6 @@ import {
   METHOD_NOT_FOUND,
   PARSE_ERROR,
 } from "../spec/current_spec.js";
-import { APP_CONFIG } from "./constants.js";
 
 // Define log data type
 type LogData = string | number | boolean | object | null | undefined;
@@ -26,70 +25,69 @@ export enum ErrorType {
 }
 
 /**
- * Error code mapping utility
+ * Error code mapping constants and utilities
  */
-export class ErrorCodeMapper {
-  private static readonly ERROR_CODE_MAP: Record<ErrorType, number> = {
-    [ErrorType.PARSE_ERROR]: PARSE_ERROR,
-    [ErrorType.INVALID_REQUEST]: INVALID_REQUEST,
-    [ErrorType.METHOD_NOT_FOUND]: METHOD_NOT_FOUND,
-    [ErrorType.INVALID_PARAMS]: INVALID_PARAMS,
-    [ErrorType.INTERNAL_ERROR]: INTERNAL_ERROR,
-    [ErrorType.TOOL_NOT_FOUND]: METHOD_NOT_FOUND, // Tools are methods in MCP context
-    [ErrorType.RESOURCE_NOT_FOUND]: METHOD_NOT_FOUND,
-    [ErrorType.AUTHENTICATION_ERROR]: INVALID_REQUEST,
-    [ErrorType.TRANSPORT_ERROR]: INTERNAL_ERROR,
-  };
 
-  private static readonly ERROR_MESSAGE_PATTERNS: Array<{
-    pattern: RegExp;
-    errorType: ErrorType;
-  }> = [
-    { pattern: /tool not found|method.*not found/i, errorType: ErrorType.TOOL_NOT_FOUND },
-    { pattern: /resource not found/i, errorType: ErrorType.RESOURCE_NOT_FOUND },
-    {
-      pattern: /invalid param|parameter.*required|missing.*param/i,
-      errorType: ErrorType.INVALID_PARAMS,
-    },
-    { pattern: /invalid request|bad request/i, errorType: ErrorType.INVALID_REQUEST },
-    { pattern: /parse error|malformed/i, errorType: ErrorType.PARSE_ERROR },
-    {
-      pattern: /authentication|unauthorized|forbidden/i,
-      errorType: ErrorType.AUTHENTICATION_ERROR,
-    },
-    { pattern: /transport|connection|session/i, errorType: ErrorType.TRANSPORT_ERROR },
-  ];
+const ERROR_CODE_MAP: Record<ErrorType, number> = {
+  [ErrorType.PARSE_ERROR]: PARSE_ERROR,
+  [ErrorType.INVALID_REQUEST]: INVALID_REQUEST,
+  [ErrorType.METHOD_NOT_FOUND]: METHOD_NOT_FOUND,
+  [ErrorType.INVALID_PARAMS]: INVALID_PARAMS,
+  [ErrorType.INTERNAL_ERROR]: INTERNAL_ERROR,
+  [ErrorType.TOOL_NOT_FOUND]: METHOD_NOT_FOUND, // Tools are methods in MCP context
+  [ErrorType.RESOURCE_NOT_FOUND]: METHOD_NOT_FOUND,
+  [ErrorType.AUTHENTICATION_ERROR]: INVALID_REQUEST,
+  [ErrorType.TRANSPORT_ERROR]: INTERNAL_ERROR,
+};
 
-  /**
-   * Get JSON-RPC error code for a given error type
-   */
-  static getErrorCode(errorType: ErrorType): number {
-    return ErrorCodeMapper.ERROR_CODE_MAP[errorType];
-  }
+const ERROR_MESSAGE_PATTERNS: Array<{
+  pattern: RegExp;
+  errorType: ErrorType;
+}> = [
+  { pattern: /tool not found|method.*not found/i, errorType: ErrorType.TOOL_NOT_FOUND },
+  { pattern: /resource not found/i, errorType: ErrorType.RESOURCE_NOT_FOUND },
+  {
+    pattern: /invalid param|parameter.*required|missing.*param/i,
+    errorType: ErrorType.INVALID_PARAMS,
+  },
+  { pattern: /invalid request|bad request/i, errorType: ErrorType.INVALID_REQUEST },
+  { pattern: /parse error|malformed/i, errorType: ErrorType.PARSE_ERROR },
+  {
+    pattern: /authentication|unauthorized|forbidden/i,
+    errorType: ErrorType.AUTHENTICATION_ERROR,
+  },
+  { pattern: /transport|connection|session/i, errorType: ErrorType.TRANSPORT_ERROR },
+];
 
-  /**
-   * Automatically detect error type from error message
-   */
-  static detectErrorType(error: Error | string): ErrorType {
-    const message = typeof error === "string" ? error : error.message;
+/**
+ * Get JSON-RPC error code for a given error type
+ */
+export function getErrorCode(errorType: ErrorType): number {
+  return ERROR_CODE_MAP[errorType];
+}
 
-    for (const { pattern, errorType } of ErrorCodeMapper.ERROR_MESSAGE_PATTERNS) {
-      if (pattern.test(message)) {
-        return errorType;
-      }
+/**
+ * Automatically detect error type from error message
+ */
+export function detectErrorType(error: Error | string): ErrorType {
+  const message = typeof error === "string" ? error : error.message;
+
+  for (const { pattern, errorType } of ERROR_MESSAGE_PATTERNS) {
+    if (pattern.test(message)) {
+      return errorType;
     }
-
-    // Default to internal error if no pattern matches
-    return ErrorType.INTERNAL_ERROR;
   }
 
-  /**
-   * Get error code from error message automatically
-   */
-  static getErrorCodeFromMessage(error: Error | string): number {
-    const errorType = ErrorCodeMapper.detectErrorType(error);
-    return ErrorCodeMapper.getErrorCode(errorType);
-  }
+  // Default to internal error if no pattern matches
+  return ErrorType.INTERNAL_ERROR;
+}
+
+/**
+ * Get error code from error message automatically
+ */
+export function getErrorCodeFromMessage(error: Error | string): number {
+  const errorType = detectErrorType(error);
+  return getErrorCode(errorType);
 }
 
 /**
@@ -304,8 +302,8 @@ export class Logger {
     const errorMessage = typeof error === "string" ? error : error.message;
 
     // Automatically detect error type if not provided
-    const detectedErrorType = errorType || ErrorCodeMapper.detectErrorType(error);
-    const errorCode = ErrorCodeMapper.getErrorCode(detectedErrorType);
+    const detectedErrorType = errorType || detectErrorType(error);
+    const errorCode = getErrorCode(detectedErrorType);
 
     const errorData: Record<string, unknown> = {
       message: errorMessage,

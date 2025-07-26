@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { CallToolResult, ContentBlock, ListToolsResult, Tool } from "../spec/current_spec.js";
-import { ErrorType, logger } from "./logger.js";
+import { logger } from "./logger.js";
 
 /**
  * Standard MCP Tools Endpoints
