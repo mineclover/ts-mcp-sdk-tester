@@ -164,7 +164,7 @@ function registerListTools(server: McpServer) {
       if (cursor) {
         try {
           startIndex = parseInt(cursor, 10);
-        } catch (e) {
+        } catch {
           startIndex = 0;
         }
       }
