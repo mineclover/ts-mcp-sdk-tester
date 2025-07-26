@@ -28,21 +28,22 @@ bun run index.ts
 bun run index.ts --port 3000
 bun run index.ts -p 8080
 
-# Force HTTP mode (default port 3000)
-bun run index.ts --http
-
 # Force stdio mode (default)
 bun run index.ts --stdio
 
-# Use with inspector for testing (default port 5173)
+# Use with inspector for testing stdio
 npx @modelcontextprotocol/inspector bun run index.ts
 
 # Change inspector port if needed
-npx @modelcontextprotocol/inspector --port 8080 bun run index.ts
+# CLIENT_PORT = inspector web , SERVER_PORT = inspector proxy   
+CLIENT_PORT=3000 SERVER_PORT=6000 npx @modelcontextprotocol/inspector
 
 # Connect inspector to HTTP server
-npx @modelcontextprotocol/inspector http://localhost:3000/sse
+npx @modelcontextprotocol/inspector http://localhost:3000/mcp
 ```
+
+Transport Type steamable HTTP를 테스트 하려면, `bun run index.ts --port 3000` 로 서버를 따로 켜야 함
+
 
 ## Testing and Debugging
 
@@ -74,6 +75,26 @@ dist/mcp-sdk-tester --port 3000
 # In another terminal:
 npx @modelcontextprotocol/inspector http://localhost:3000/sse
 ```
+
+
+
+```
+claude mcp add --transport http mcp-protocol http://localhost:3000/mcp
+```
+
+settings.local.json
+```
+  "permissions": {
+    "allow": [
+    "mcp__mcp-protocol",
+    "WebFetch(domain:raw.githubusercontent.com)",
+    "WebFetch(domain:spec.modelcontextprotocol.io)",
+    "WebFetch(domain:modelcontextprotocol.io)"
+    ]
+  }
+```
+
+
 
 ### Available Server Options
 

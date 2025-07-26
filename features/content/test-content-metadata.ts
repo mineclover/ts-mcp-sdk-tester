@@ -20,7 +20,7 @@ export function registerTestContentMetadata(server: McpServer) {
     async ({ contentType, includeCustomMeta }) => {
       try {
         const baseContent = {
-          type: contentType as const,
+          type: contentType ,
         };
 
         let content: any;
