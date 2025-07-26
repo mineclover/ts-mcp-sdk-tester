@@ -15,6 +15,8 @@ import { registerRootsFeatures } from "./features/roots/index.js";
 import { registerAuthFeatures } from "./features/auth/index.js";
 import { registerLoggingFeatures } from "./features/logging/index.js";
 import { registerCompletionFeatures } from "./features/completion/index.js";
+// Import standard MCP protocol endpoints
+import { registerStandardEndpoints } from "./standard/index.js";
 
 /**
  * MCP SDK Tester - A comprehensive testing server for MCP SDK features
@@ -51,6 +53,9 @@ function createServer() {
     }
   );
 
+  // Register standard MCP protocol endpoints
+  registerStandardEndpoints(server);
+  
   // Register all modular features
   registerServerFeatures(server);
   registerResourceFeatures(server);
