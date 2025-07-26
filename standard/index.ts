@@ -7,6 +7,8 @@ import { registerSamplingEndpoints } from "./sampling.js";
 import { registerElicitationEndpoints } from "./elicitation.js";
 import { registerRootsEndpoints } from "./roots.js";
 import { registerAuthEndpoints } from "./auth.js";
+import { registerLoggingEndpoints } from "./logging.js";
+import { registerCompletionEndpoints } from "./completion.js";
 
 /**
  * Standard MCP Protocol Endpoints
@@ -35,4 +37,8 @@ export function registerStandardEndpoints(server: McpServer) {
   registerSamplingEndpoints(server);
   registerElicitationEndpoints(server);
   registerRootsEndpoints(server);
+  
+  // Utility endpoints
+  registerLoggingEndpoints(server);
+  registerCompletionEndpoints(server);
 }
