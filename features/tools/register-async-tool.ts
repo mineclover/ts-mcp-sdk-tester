@@ -1,6 +1,7 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { registeredTools } from './register-simple-tool.js';
+import { AsyncToolRegistrationSchema } from './schemas.js';
 
 /**
  * Register Async Tool
@@ -13,11 +14,7 @@ export function registerRegisterAsyncTool(server: McpServer) {
     {
       title: "Register Async Tool",
       description: "Register a tool that performs async operations for testing",
-      inputSchema: {
-        name: z.string().describe("Name of the async tool to register"),
-        description: z.string().describe("Description of the tool"),
-        delay: z.number().min(0).max(5000).describe("Delay in milliseconds (0-5000)"),
-      },
+      inputSchema: AsyncToolRegistrationSchema.shape,
     },
     async ({ name, description, delay }) => {
       try {

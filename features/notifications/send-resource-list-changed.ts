@@ -1,4 +1,5 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { EmptySchema } from './schemas.js';
 
 /**
  * Send Resource List Changed Tool
@@ -11,7 +12,7 @@ export function registerSendResourceListChanged(server: McpServer) {
     {
       title: "Send Resource List Changed",
       description: "Test sending resource list changed notification",
-      inputSchema: {},
+      inputSchema: EmptySchema.shape,
     },
     async () => {
       try {

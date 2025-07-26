@@ -1,4 +1,5 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { EmptySchema } from './schemas.js';
 import { registeredResources } from './register-simple-resource.js';
 
 /**
@@ -12,7 +13,7 @@ export function registerListRegisteredResources(server: McpServer) {
     {
       title: "List Registered Resources",
       description: "List all resources registered for testing",
-      inputSchema: {},
+      inputSchema: EmptySchema.shape,
     },
     async () => {
       try {

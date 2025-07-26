@@ -1,5 +1,6 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { SimplePromptRegistrationSchema, EmptySchema } from './schemas.js';
 
 // Store registered prompts for testing
 const registeredPrompts = new Map<string, any>();
@@ -15,18 +16,14 @@ export function registerRegisterSimplePrompt(server: McpServer) {
     {
       title: "Register Simple Prompt",
       description: "Register a simple prompt with no arguments for testing",
-      inputSchema: {
-        name: z.string().describe("Name of the prompt to register"),
-        description: z.string().describe("Description of the prompt"),
-        message: z.string().describe("Message content for the prompt"),
-      },
+      inputSchema: SimplePromptRegistrationSchema.shape,
     },
     async ({ name, description, message }) => {
       try {
         server.registerPrompt(name, {
           title: name,
           description: description,
-          argsSchema: {},
+          argsSchema: EmptySchema.shape,
         }, () => ({
           messages: [
             {

@@ -1,5 +1,6 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registeredTools } from './register-simple-tool.js';
+import { EmptySchema } from './schemas.js';
 
 /**
  * List Registered Tools
@@ -12,7 +13,7 @@ export function registerListRegisteredTools(server: McpServer) {
     {
       title: "List Registered Tools",
       description: "List all tools registered for testing",
-      inputSchema: {},
+      inputSchema: EmptySchema.shape,
     },
     async () => {
       try {

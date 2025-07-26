@@ -1,6 +1,7 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { registeredPrompts } from './register-simple-prompt.js';
+import { ParameterizedPromptRegistrationSchema } from './schemas.js';
 
 /**
  * Register Parameterized Prompt Tool
@@ -13,13 +14,7 @@ export function registerRegisterParameterizedPrompt(server: McpServer) {
     {
       title: "Register Parameterized Prompt",
       description: "Register a prompt with arguments for testing",
-      inputSchema: {
-        name: z.string().describe("Name of the prompt to register"),
-        description: z.string().describe("Description of the prompt"),
-        argName: z.string().describe("Name of the argument"),
-        argDescription: z.string().describe("Description of the argument"),
-        messageTemplate: z.string().describe("Message template with {argName} placeholder"),
-      },
+      inputSchema: ParameterizedPromptRegistrationSchema.shape,
     },
     async ({ name, description, argName, argDescription, messageTemplate }) => {
       try {

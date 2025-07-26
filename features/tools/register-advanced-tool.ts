@@ -1,6 +1,7 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { registeredTools } from './register-simple-tool.js';
+import { AdvancedToolRegistrationSchema } from './schemas.js';
 
 /**
  * Register Advanced Tool
@@ -13,12 +14,7 @@ export function registerRegisterAdvancedTool(server: McpServer) {
     {
       title: "Register Advanced Tool",
       description: "Register a tool with annotations, output schema, and advanced features",
-      inputSchema: {
-        name: z.string().describe("Name of the tool to register"),
-        description: z.string().describe("Description of the tool"),
-        destructiveHint: z.boolean().optional().describe("Whether the tool performs destructive operations"),
-        idempotentHint: z.boolean().optional().describe("Whether the tool is idempotent"),
-      },
+      inputSchema: AdvancedToolRegistrationSchema.shape,
     },
     async ({ name, description, destructiveHint, idempotentHint }) => {
       try {

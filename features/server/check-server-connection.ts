@@ -1,4 +1,5 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { EmptySchema } from './schemas.js';
 
 /**
  * Check Server Connection Tool
@@ -11,7 +12,7 @@ export function registerCheckServerConnection(server: McpServer) {
     {
       title: "Check Server Connection",
       description: "Check if the MCP server is connected to a transport",
-      inputSchema: {},
+      inputSchema: EmptySchema.shape,
     },
     async () => {
       try {

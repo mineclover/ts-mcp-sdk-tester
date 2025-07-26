@@ -1,4 +1,5 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { EmptySchema } from './schemas.js';
 
 /**
  * Send Prompt List Changed Tool
@@ -11,7 +12,7 @@ export function registerSendPromptListChanged(server: McpServer) {
     {
       title: "Send Prompt List Changed",
       description: "Test sending prompt list changed notification",
-      inputSchema: {},
+      inputSchema: EmptySchema.shape,
     },
     async () => {
       try {

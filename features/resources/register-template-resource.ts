@@ -1,6 +1,7 @@
 import { type McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { registeredResources } from './register-simple-resource.js';
+import { TemplateResourceRegistrationSchema } from './schemas.js';
 
 /**
  * Register Template Resource Tool
@@ -13,11 +14,7 @@ export function registerRegisterTemplateResource(server: McpServer) {
     {
       title: "Register Template Resource",
       description: "Register a parameterized resource using ResourceTemplate with autocomplete",
-      inputSchema: {
-        templateUri: z.string().describe("Template URI pattern (e.g., 'user://{id}')"),
-        name: z.string().describe("Name of the resource template"),
-        description: z.string().optional().describe("Description of the resource template"),
-      },
+      inputSchema: TemplateResourceRegistrationSchema.shape,
     },
     async ({ templateUri, name, description }) => {
       try {

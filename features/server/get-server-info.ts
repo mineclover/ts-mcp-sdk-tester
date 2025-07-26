@@ -1,4 +1,5 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { EmptySchema } from './schemas.js';
 
 /**
  * Get Server Info Tool
@@ -11,7 +12,7 @@ export function registerGetServerInfo(server: McpServer) {
     {
       title: "Get Server Info",
       description: "Get comprehensive server information and status",
-      inputSchema: {},
+      inputSchema: EmptySchema.shape,
     },
     async () => {
       try {

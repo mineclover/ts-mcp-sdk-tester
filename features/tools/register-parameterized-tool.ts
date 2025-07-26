@@ -1,6 +1,7 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { registeredTools } from './register-simple-tool.js';
+import { ParameterizedToolRegistrationSchema } from './schemas.js';
 
 /**
  * Register Parameterized Tool
@@ -13,13 +14,7 @@ export function registerRegisterParameterizedTool(server: McpServer) {
     {
       title: "Register Parameterized Tool",
       description: "Register a tool with parameters for testing",
-      inputSchema: {
-        name: z.string().describe("Name of the tool to register"),
-        description: z.string().describe("Description of the tool"),
-        paramName: z.string().describe("Name of the parameter"),
-        paramDescription: z.string().describe("Description of the parameter"),
-        paramType: z.enum(["string", "number", "boolean"]).describe("Type of the parameter"),
-      },
+      inputSchema: ParameterizedToolRegistrationSchema.shape,
     },
     async ({ name, description, paramName, paramDescription, paramType }) => {
       try {

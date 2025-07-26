@@ -1,5 +1,6 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { ContentTestSchema } from './schemas.js';
 
 /**
  * Test Content Types Tool
@@ -12,9 +13,7 @@ export function registerTestContentTypes(server: McpServer) {
     {
       title: "Test Content Types",
       description: "Test different content types (text, image, audio, resource) in tool responses",
-      inputSchema: {
-        contentType: z.enum(["text", "image", "audio", "resource", "all"]).describe("Type of content to test"),
-      },
+      inputSchema: ContentTestSchema.shape,
     },
     async ({ contentType }) => {
       try {

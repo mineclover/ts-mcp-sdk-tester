@@ -1,4 +1,5 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { EmptySchema } from './schemas.js';
 import { registeredPrompts } from './register-simple-prompt.js';
 
 /**
@@ -12,7 +13,7 @@ export function registerListRegisteredPrompts(server: McpServer) {
     {
       title: "List Registered Prompts",
       description: "List all prompts registered for testing",
-      inputSchema: {},
+      inputSchema: EmptySchema.shape,
     },
     async () => {
       try {

@@ -1,5 +1,6 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { SimpleToolRegistrationSchema, EmptySchema } from './schemas.js';
 
 // Store registered tools for testing
 const registeredTools = new Map<string, any>();
@@ -15,18 +16,14 @@ export function registerRegisterSimpleTool(server: McpServer) {
     {
       title: "Register Simple Tool",
       description: "Register a simple tool with no parameters for testing",
-      inputSchema: {
-        name: z.string().describe("Name of the tool to register"),
-        description: z.string().describe("Description of the tool"),
-        response: z.string().describe("Response text the tool should return"),
-      },
+      inputSchema: SimpleToolRegistrationSchema.shape,
     },
     async ({ name, description, response }) => {
       try {
         server.registerTool(name, {
           title: name,
           description: description,
-          inputSchema: {},
+          inputSchema: EmptySchema.shape,
         }, async () => ({
           content: [
             {

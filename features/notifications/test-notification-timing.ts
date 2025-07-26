@@ -1,5 +1,6 @@
 import { type McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { NotificationTimingTestSchema } from './schemas.js';
 
 /**
  * Test Notification Timing Tool
@@ -12,11 +13,7 @@ export function registerTestNotificationTiming(server: McpServer) {
     {
       title: "Test Notification Timing",
       description: "Test sending notifications with timing intervals",
-      inputSchema: {
-        count: z.number().min(1).max(10).describe("Number of notifications to send"),
-        interval: z.number().min(100).max(5000).describe("Interval between notifications (ms)"),
-        type: z.enum(["resources", "tools", "prompts", "all"]).describe("Type of notifications to send"),
-      },
+      inputSchema: NotificationTimingTestSchema.shape,
     },
     async ({ count, interval, type }) => {
       try {
