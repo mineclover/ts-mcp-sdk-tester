@@ -4,11 +4,17 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import cors from "cors";
 import express, { type Request, type Response } from "express";
+import { registerTestTransportCapabilities } from "./test-transport-capabilities.js";
 
 /**
  * Transport Management Features
  * Handles different MCP transport types and server setup with backwards compatibility
  */
+
+export function registerTransportFeatures(server: McpServer) {
+  // Register transport testing tools
+  registerTestTransportCapabilities(server);
+}
 
 export interface TransportOptions {
   port?: number;
@@ -236,7 +242,22 @@ function setupStreamableTransport(server: McpServer, port: number) {
 // Helper function to get tool count for HTML display
 function getToolCount(): number {
   // Return the total number of tools available
-  return 27; // Updated based on our modular implementation
+  // Based on our comprehensive implementation:
+  // Server: 10 tools (check_server_connection, get_server_info, close_server_connection, 
+  //                  get_transport_info, get_registry_details, clear_all_registrations,
+  //                  validate_registrations, get_performance_metrics, health_check, test_error_handling)
+  // Tools: 5 tools (register_simple_tool, register_parameterized_tool, register_advanced_tool, 
+  //                 register_async_tool, list_registered_tools)
+  // Resources: 4 tools (register_simple_resource, register_template_resource, 
+  //                    register_rich_resource, list_registered_resources)
+  // Prompts: 5 tools (register_simple_prompt, register_parameterized_prompt, register_dynamic_prompt,
+  //                   register_conversation_prompt, list_registered_prompts)
+  // Notifications: 6 tools (send_resource_list_changed, send_prompt_list_changed, send_tool_list_changed,
+  //                         send_all_list_changed, test_notification_after_registration, test_notification_timing)
+  // Content: 6 tools (test_text_content, test_image_content, test_audio_content, 
+  //                   test_mixed_content, test_large_content, test_content_metadata)
+  // Transports: 1 tool (test_transport_capabilities) - if we add it
+  return 37; // Updated based on our comprehensive modular implementation
 }
 
 export function parseArguments(): TransportOptions {

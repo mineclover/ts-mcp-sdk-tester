@@ -5,6 +5,9 @@ import { registerRegisterDynamicPrompt } from "./register-dynamic-prompt.js";
 import { registerRegisterParameterizedPrompt } from "./register-parameterized-prompt.js";
 // Import individual prompt tools
 import { registerRegisterSimplePrompt } from "./register-simple-prompt.js";
+// Import MCP spec endpoint implementations
+import { registerListPrompts } from "./list-prompts.js";
+import { registerGetPrompt } from "./get-prompt.js";
 
 /**
  * Prompt Management Features
@@ -18,6 +21,10 @@ export function registerPromptFeatures(server: McpServer) {
   registerRegisterConversationPrompt(server);
   registerRegisterDynamicPrompt(server);
   registerListRegisteredPrompts(server);
+  
+  // Register MCP spec endpoint implementations
+  registerListPrompts(server);
+  registerGetPrompt(server);
 }
 
 // Re-export shared state for cross-tool access

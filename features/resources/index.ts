@@ -4,6 +4,11 @@ import { registerRegisterRichResource } from "./register-rich-resource.js";
 // Import individual resource tools
 import { registerRegisterSimpleResource } from "./register-simple-resource.js";
 import { registerRegisterTemplateResource } from "./register-template-resource.js";
+// Import MCP spec endpoint implementations
+import { registerListResources } from "./list-resources.js";
+import { registerReadResource } from "./read-resource.js";
+import { registerSubscribeResource } from "./subscribe-resource.js";
+import { registerUnsubscribeResource } from "./unsubscribe-resource.js";
 
 /**
  * Resource Management Features
@@ -16,6 +21,12 @@ export function registerResourceFeatures(server: McpServer) {
   registerRegisterTemplateResource(server);
   registerRegisterRichResource(server);
   registerListRegisteredResources(server);
+  
+  // Register MCP spec endpoint implementations
+  registerListResources(server);
+  registerReadResource(server);
+  registerSubscribeResource(server);
+  registerUnsubscribeResource(server);
 }
 
 // Re-export shared state for cross-tool access

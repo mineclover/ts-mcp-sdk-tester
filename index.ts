@@ -6,7 +6,13 @@ import { registerResourceFeatures } from "./features/resources/index.js";
 // Import all modular features
 import { registerServerFeatures } from "./features/server/index.js";
 import { registerToolFeatures } from "./features/tools/index.js";
-import { parseArguments, setupTransport } from "./features/transports/index.js";
+import { parseArguments, setupTransport, registerTransportFeatures } from "./features/transports/index.js";
+// Import new MCP spec endpoint features
+import { registerPingFeatures } from "./features/ping/index.js";
+import { registerSamplingFeatures } from "./features/sampling/index.js";
+import { registerElicitationFeatures } from "./features/elicitation/index.js";
+import { registerRootsFeatures } from "./features/roots/index.js";
+import { registerAuthFeatures } from "./features/auth/index.js";
 
 /**
  * MCP SDK Tester - A comprehensive testing server for MCP SDK features
@@ -31,6 +37,14 @@ function createServer() {
   registerPromptFeatures(server);
   registerContentFeatures(server);
   registerNotificationFeatures(server);
+  registerTransportFeatures(server);
+  
+  // Register new MCP spec endpoint features
+  registerPingFeatures(server);
+  registerSamplingFeatures(server);
+  registerElicitationFeatures(server);
+  registerRootsFeatures(server);
+  registerAuthFeatures(server);
 
   // Add comprehensive test tool
   server.registerTool(

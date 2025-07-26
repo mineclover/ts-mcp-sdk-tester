@@ -638,7 +638,7 @@ export interface BlobResourceContents extends ResourceContents {
  */
 export interface ListPromptsRequest extends PaginatedRequest {
   method: "prompts/list";
-}
+} 
 
 /**
  * The server's response to a prompts/list request from the client.

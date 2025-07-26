@@ -5,6 +5,9 @@ import { registerRegisterAsyncTool } from "./register-async-tool.js";
 import { registerRegisterParameterizedTool } from "./register-parameterized-tool.js";
 // Import individual tool management tools
 import { registerRegisterSimpleTool } from "./register-simple-tool.js";
+// Import MCP spec endpoint implementations
+import { registerListTools } from "./list-tools.js";
+import { registerCallTool } from "./call-tool.js";
 
 /**
  * Tool Management Features
@@ -18,6 +21,10 @@ export function registerToolFeatures(server: McpServer) {
   registerRegisterAdvancedTool(server);
   registerRegisterAsyncTool(server);
   registerListRegisteredTools(server);
+  
+  // Register MCP spec endpoint implementations
+  registerListTools(server);
+  registerCallTool(server);
 }
 
 // Re-export shared state for cross-tool access
