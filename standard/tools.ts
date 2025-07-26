@@ -9,7 +9,7 @@ import type {
   Tool,
   ContentBlock
 } from "../spec/current_spec.js";
-import { logger } from "./logger.js";
+import { logger, ErrorType } from "./logger.js";
 
 /**
  * Standard MCP Tools Endpoints
@@ -332,7 +332,9 @@ Writable: ${info.writable}`,
           };
           
         } else {
-          throw new Error(`Tool not found: ${name}`);
+          const error = new Error(`Tool not found: ${name}`);
+          // This will be automatically detected as TOOL_NOT_FOUND by ErrorCodeMapper
+          throw error;
         }
         
         const result: CallToolResult = {

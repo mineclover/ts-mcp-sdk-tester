@@ -5,7 +5,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import cors from "cors";
 import express, { type Request, type Response } from "express";
 import { APP_CONFIG, TRANSPORT_CONFIG } from "./constants.js";
-import { logger } from "./logger.js";
+import { logger, ErrorType, ErrorCodeMapper } from "./logger.js";
 /**
  * Transport Management Features
  * Handles different MCP transport types and server setup
@@ -94,10 +94,11 @@ function setupStreamableTransport(server: McpServer, port: number) {
         await server.connect(transport);
       } else {
         // Invalid request
+        const errorCode = ErrorCodeMapper.getErrorCode(ErrorType.INVALID_REQUEST);
         res.status(400).json({
           jsonrpc: APP_CONFIG.jsonrpc,
           error: {
-            code: -32000,
+            code: errorCode,
             message: "Bad Request: No valid session ID provided",
           },
           id: null,
@@ -115,10 +116,11 @@ function setupStreamableTransport(server: McpServer, port: number) {
           sessionId: req.headers["mcp-session-id"]
         });
       if (!res.headersSent) {
+        const errorCode = ErrorCodeMapper.getErrorCode(ErrorType.INTERNAL_ERROR);
         res.status(500).json({
           jsonrpc: APP_CONFIG.jsonrpc,
           error: {
-            code: -32603,
+            code: errorCode,
             message: "Internal server error",
           },
           id: null,

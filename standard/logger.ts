@@ -1,9 +1,90 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LoggingLevel } from "../spec/current_spec.js";
+import { 
+  PARSE_ERROR,
+  INVALID_REQUEST,
+  METHOD_NOT_FOUND,
+  INVALID_PARAMS,
+  INTERNAL_ERROR
+} from "../spec/current_spec.js";
 import { APP_CONFIG } from "./constants.js";
 
 // Define log data type
 type LogData = string | number | boolean | object | null | undefined;
+
+// JSON-RPC error code mapping
+export enum ErrorType {
+  PARSE_ERROR = "parse_error",
+  INVALID_REQUEST = "invalid_request", 
+  METHOD_NOT_FOUND = "method_not_found",
+  INVALID_PARAMS = "invalid_params",
+  INTERNAL_ERROR = "internal_error",
+  TOOL_NOT_FOUND = "tool_not_found",
+  RESOURCE_NOT_FOUND = "resource_not_found",
+  AUTHENTICATION_ERROR = "authentication_error",
+  TRANSPORT_ERROR = "transport_error"
+}
+
+/**
+ * Error code mapping utility
+ */
+export class ErrorCodeMapper {
+  private static readonly ERROR_CODE_MAP: Record<ErrorType, number> = {
+    [ErrorType.PARSE_ERROR]: PARSE_ERROR,
+    [ErrorType.INVALID_REQUEST]: INVALID_REQUEST,
+    [ErrorType.METHOD_NOT_FOUND]: METHOD_NOT_FOUND,
+    [ErrorType.INVALID_PARAMS]: INVALID_PARAMS,
+    [ErrorType.INTERNAL_ERROR]: INTERNAL_ERROR,
+    [ErrorType.TOOL_NOT_FOUND]: METHOD_NOT_FOUND, // Tools are methods in MCP context
+    [ErrorType.RESOURCE_NOT_FOUND]: METHOD_NOT_FOUND,
+    [ErrorType.AUTHENTICATION_ERROR]: INVALID_REQUEST,
+    [ErrorType.TRANSPORT_ERROR]: INTERNAL_ERROR
+  };
+
+  private static readonly ERROR_MESSAGE_PATTERNS: Array<{
+    pattern: RegExp;
+    errorType: ErrorType;
+  }> = [
+    { pattern: /tool not found|method.*not found/i, errorType: ErrorType.TOOL_NOT_FOUND },
+    { pattern: /resource not found/i, errorType: ErrorType.RESOURCE_NOT_FOUND },
+    { pattern: /invalid param|parameter.*required|missing.*param/i, errorType: ErrorType.INVALID_PARAMS },
+    { pattern: /invalid request|bad request/i, errorType: ErrorType.INVALID_REQUEST },
+    { pattern: /parse error|malformed/i, errorType: ErrorType.PARSE_ERROR },
+    { pattern: /authentication|unauthorized|forbidden/i, errorType: ErrorType.AUTHENTICATION_ERROR },
+    { pattern: /transport|connection|session/i, errorType: ErrorType.TRANSPORT_ERROR }
+  ];
+
+  /**
+   * Get JSON-RPC error code for a given error type
+   */
+  static getErrorCode(errorType: ErrorType): number {
+    return this.ERROR_CODE_MAP[errorType];
+  }
+
+  /**
+   * Automatically detect error type from error message
+   */
+  static detectErrorType(error: Error | string): ErrorType {
+    const message = typeof error === 'string' ? error : error.message;
+    
+    for (const { pattern, errorType } of this.ERROR_MESSAGE_PATTERNS) {
+      if (pattern.test(message)) {
+        return errorType;
+      }
+    }
+    
+    // Default to internal error if no pattern matches
+    return ErrorType.INTERNAL_ERROR;
+  }
+
+  /**
+   * Get error code from error message automatically
+   */
+  static getErrorCodeFromMessage(error: Error | string): number {
+    const errorType = this.detectErrorType(error);
+    return this.getErrorCode(errorType);
+  }
+}
 
 /**
  * Centralized Logging Manager
@@ -204,23 +285,37 @@ export class Logger {
   }
 
   /**
-   * Log server errors with context (ERROR level)
+   * Log server errors with context and JSON-RPC error codes (ERROR level)
    */
-  async logServerError(error: Error | string, context: string, details?: unknown) {
+  async logServerError(error: Error | string, context: string, details?: unknown, errorType?: ErrorType) {
     const errorMessage = typeof error === 'string' ? error : error.message;
+    
+    // Automatically detect error type if not provided
+    const detectedErrorType = errorType || ErrorCodeMapper.detectErrorType(error);
+    const errorCode = ErrorCodeMapper.getErrorCode(detectedErrorType);
+    
     const errorData: Record<string, unknown> = {
       message: errorMessage,
       context,
+      errorCode,
+      errorType: detectedErrorType,
     };
     
     if (typeof error === 'object' && error instanceof Error) {
-      if (error.name) errorData.errorType = error.name;
+      if (error.name) errorData.errorName = error.name;
       if (error.stack) errorData.stack = error.stack.split('\n').slice(0, 3).join('\n');
     }
     
     if (details) errorData.details = details;
     
     await this.error(errorData, "server");
+  }
+
+  /**
+   * Log server errors with explicit error type (ERROR level)
+   */
+  async logServerErrorWithType(error: Error | string, context: string, errorType: ErrorType, details?: unknown) {
+    await this.logServerError(error, context, details, errorType);
   }
 
   /**
