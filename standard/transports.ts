@@ -5,7 +5,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import cors from "cors";
 import express, { type Request, type Response } from "express";
 import { APP_CONFIG, TRANSPORT_CONFIG } from "./constants.js";
-import { logger, ErrorType, ErrorCodeMapper } from "./logger.js";
+import { ErrorCodeMapper, ErrorType, logger } from "./logger.js";
 /**
  * Transport Management Features
  * Handles different MCP transport types and server setup
@@ -18,12 +18,12 @@ export interface TransportOptions {
 
 export function setupTransport(server: McpServer, options: TransportOptions = {}) {
   logger.logMethodEntry("setupTransport", options, "transport");
-  
+
   const { port, transport } = options;
 
   // Determine transport type based on arguments
   const transportType = transport || (port ? "streamable" : "stdio");
-  
+
   logger.info(`Setting up ${transportType} transport`, "transport");
 
   switch (transportType) {
@@ -38,14 +38,16 @@ export function setupTransport(server: McpServer, options: TransportOptions = {}
 
 function setupStdioTransport(server: McpServer) {
   logger.logMethodEntry("setupStdioTransport", undefined, "transport");
-  
+
   try {
     const transport = new StdioServerTransport();
     server.connect(transport);
     logger.info("MCP Server running on stdio transport", "transport");
   } catch (error) {
-    logger.logServerError(error instanceof Error ? error : new Error(String(error)), 
-      "setupStdioTransport");
+    logger.logServerError(
+      error instanceof Error ? error : new Error(String(error)),
+      "setupStdioTransport"
+    );
     throw error;
   }
 }
@@ -109,12 +111,15 @@ function setupStreamableTransport(server: McpServer, port: number) {
       // Handle the request with the transport
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
-      logger.logServerError(error instanceof Error ? error : new Error(String(error)), 
-        "HTTP request handling", { 
-          method: req.method, 
+      logger.logServerError(
+        error instanceof Error ? error : new Error(String(error)),
+        "HTTP request handling",
+        {
+          method: req.method,
           url: req.url,
-          sessionId: req.headers["mcp-session-id"]
-        });
+          sessionId: req.headers["mcp-session-id"],
+        }
+      );
       if (!res.headersSent) {
         const errorCode = ErrorCodeMapper.getErrorCode(ErrorType.INTERNAL_ERROR);
         res.status(500).json({
@@ -222,7 +227,10 @@ function setupStreamableTransport(server: McpServer, port: number) {
   });
 
   const httpServer = app.listen(port, () => {
-    logger.info(`MCP Server running on http://localhost:${port} (Streamable HTTP transport)`, "transport");
+    logger.info(
+      `MCP Server running on http://localhost:${port} (Streamable HTTP transport)`,
+      "transport"
+    );
     logger.info(`Protocol: ${APP_CONFIG.protocol}`, "transport");
     logger.info(`Streamable HTTP endpoint: http://localhost:${port}/mcp`, "transport");
     logger.info(`Health check: http://localhost:${port}/health`, "transport");

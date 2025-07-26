@@ -1,12 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CompleteRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import type { 
-  CompleteResult
-} from "../spec/current_spec.js";
+import type { CompleteResult } from "../spec/current_spec.js";
 
 /**
  * Standard MCP Completion Endpoints
- * 
+ *
  * Implements the core MCP completion protocol endpoints:
  * - completion/complete: Provide argument completion suggestions
  */
@@ -24,10 +22,10 @@ function registerComplete(server: McpServer) {
     CompleteRequestSchema,
     async (request): Promise<CompleteResult> => {
       const { ref, argument, context } = request.params;
-      
+
       // Generate completion suggestions based on the reference type and argument
       let completionValues: string[] = [];
-      
+
       if (ref.type === "ref/prompt") {
         // Prompt argument completions
         if (argument.name === "name") {
@@ -42,18 +40,22 @@ function registerComplete(server: McpServer) {
           completionValues = ["brief", "medium", "detailed"];
         } else {
           // Generic completions for unknown arguments
-          completionValues = [`${argument.value}_option1`, `${argument.value}_option2`, `${argument.value}_option3`];
+          completionValues = [
+            `${argument.value}_option1`,
+            `${argument.value}_option2`,
+            `${argument.value}_option3`,
+          ];
         }
       } else if (ref.type === "ref/resource") {
         // Resource template argument completions
         const uri = ref.uri;
-        
+
         if (uri.includes("{path}")) {
           completionValues = [
             "/home/user/documents",
-            "/tmp/temp-file.txt", 
+            "/tmp/temp-file.txt",
             "/var/log/app.log",
-            "/etc/config.json"
+            "/etc/config.json",
           ];
         } else if (uri.includes("{endpoint}")) {
           completionValues = ["users", "posts", "comments", "products", "orders"];
@@ -64,17 +66,17 @@ function registerComplete(server: McpServer) {
           completionValues = ["resource1", "resource2", "resource3"];
         }
       }
-      
+
       // Filter completions based on the current argument value
       if (argument.value) {
-        completionValues = completionValues.filter(value => 
+        completionValues = completionValues.filter((value) =>
           value.toLowerCase().includes(argument.value.toLowerCase())
         );
       }
-      
+
       // Limit to 100 items as per spec
       const limitedValues = completionValues.slice(0, 100);
-      
+
       const result: CompleteResult = {
         completion: {
           values: limitedValues,
@@ -89,7 +91,7 @@ function registerComplete(server: McpServer) {
           generatedAt: new Date().toISOString(),
         },
       };
-      
+
       return result;
     }
   );

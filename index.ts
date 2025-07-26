@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerStandardEndpoints, parseArguments, setupTransport } from "./standard/index.js";
 import { APP_CONFIG } from "./standard/constants.js";
+import { parseArguments, registerStandardEndpoints, setupTransport } from "./standard/index.js";
 import { logger } from "./standard/logger.js";
 
 /**
@@ -16,8 +16,8 @@ function createServer() {
       name: APP_CONFIG.displayName,
       version: APP_CONFIG.version,
     },
-    { 
-      capabilities: { 
+    {
+      capabilities: {
         logging: {},
         completions: {},
         resources: {
@@ -34,13 +34,12 @@ function createServer() {
         roots: {
           listChanged: true,
         },
-      } 
+      },
     }
   );
 
   // Register standard MCP protocol endpoints
   registerStandardEndpoints(server);
-
 
   return server;
 }

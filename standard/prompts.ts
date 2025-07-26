@@ -1,19 +1,19 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { 
+import {
+  GetPromptRequestSchema,
   ListPromptsRequestSchema,
-  GetPromptRequestSchema
 } from "@modelcontextprotocol/sdk/types.js";
-import type { 
-  ListPromptsResult,
+import type {
+  ContentBlock,
   GetPromptResult,
+  ListPromptsResult,
   Prompt,
   PromptMessage,
-  ContentBlock
 } from "../spec/current_spec.js";
 
 /**
  * Standard MCP Prompts Endpoints
- * 
+ *
  * Implements the core MCP prompt management protocol endpoints:
  * - prompts/list: List available prompts and prompt templates
  * - prompts/get: Get a specific prompt with optional templating
@@ -33,7 +33,7 @@ function registerListPrompts(server: McpServer) {
     ListPromptsRequestSchema,
     async (request): Promise<ListPromptsResult> => {
       const { cursor } = request.params || {};
-      
+
       // Sample prompts for demonstration
       const allPrompts: Prompt[] = [
         {
@@ -46,7 +46,7 @@ function registerListPrompts(server: McpServer) {
               title: "Name",
               description: "The name to greet",
               required: true,
-            }
+            },
           ],
         },
         {
@@ -65,7 +65,7 @@ function registerListPrompts(server: McpServer) {
               title: "Context",
               description: "Additional context for the review",
               required: false,
-            }
+            },
           ],
         },
         {
@@ -89,15 +89,15 @@ function registerListPrompts(server: McpServer) {
               title: "Summary Length",
               description: "Desired length: brief, medium, or detailed",
               required: false,
-            }
+            },
           ],
         },
       ];
-      
+
       // Simple pagination implementation
       const pageSize = 10;
       let startIndex = 0;
-      
+
       if (cursor) {
         try {
           startIndex = parseInt(cursor, 10);
@@ -105,10 +105,10 @@ function registerListPrompts(server: McpServer) {
           startIndex = 0;
         }
       }
-      
+
       const endIndex = startIndex + pageSize;
       const prompts = allPrompts.slice(startIndex, endIndex);
-      
+
       const result: ListPromptsResult = {
         prompts,
         _meta: {
@@ -117,12 +117,12 @@ function registerListPrompts(server: McpServer) {
           startIndex,
         },
       };
-      
+
       // Add pagination cursor if there are more results
       if (endIndex < allPrompts.length) {
         result.nextCursor = endIndex.toString();
       }
-      
+
       return result;
     }
   );
@@ -137,11 +137,11 @@ function registerGetPrompt(server: McpServer) {
     GetPromptRequestSchema,
     async (request): Promise<GetPromptResult> => {
       const { name, arguments: args } = request.params;
-      
+
       // Sample prompt templates
       let description: string;
       let messages: PromptMessage[];
-      
+
       if (name === "greeting") {
         const nameArg = args?.name || "World";
         description = "A friendly greeting prompt";
@@ -152,7 +152,7 @@ function registerGetPrompt(server: McpServer) {
               type: "text",
               text: `Hello, ${nameArg}! How are you today?`,
             } as ContentBlock,
-          }
+          },
         ];
       } else if (name === "code-review") {
         const language = args?.language || "JavaScript";
@@ -172,7 +172,7 @@ Please check for:
 - Security concerns
 - Documentation completeness`,
             } as ContentBlock,
-          }
+          },
         ];
       } else if (name === "simple-prompt") {
         description = "A simple static prompt";
@@ -183,7 +183,7 @@ Please check for:
               type: "text",
               text: "This is a simple prompt without any templating.",
             } as ContentBlock,
-          }
+          },
         ];
       } else if (name === "summarize") {
         const text = args?.text || "[No text provided]";
@@ -198,12 +198,12 @@ Please check for:
 
 ${text}`,
             } as ContentBlock,
-          }
+          },
         ];
       } else {
         throw new Error(`Prompt not found: ${name}`);
       }
-      
+
       const result: GetPromptResult = {
         description,
         messages,
@@ -213,7 +213,7 @@ ${text}`,
           arguments: args,
         },
       };
-      
+
       return result;
     }
   );

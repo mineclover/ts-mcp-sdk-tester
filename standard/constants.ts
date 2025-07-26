@@ -4,7 +4,7 @@
  */
 
 import packageJson from "../package.json" with { type: "json" };
-import { LATEST_PROTOCOL_VERSION , JSONRPC_VERSION } from "../spec/current_spec.js";
+import { JSONRPC_VERSION, LATEST_PROTOCOL_VERSION } from "../spec/current_spec.js";
 
 export const APP_CONFIG = {
   name: packageJson.name,

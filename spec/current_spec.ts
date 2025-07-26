@@ -1,6 +1,6 @@
 /* JSON-RPC types */
 /**
- * 
+ *
  * @modelcontextprotocol/sdk/types.js
  * version: 2025-06-18
  * https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/schema/2025-06-18/schema.ts

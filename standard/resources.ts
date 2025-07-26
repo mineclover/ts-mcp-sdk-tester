@@ -1,25 +1,25 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { 
+import {
   ListResourcesRequestSchema,
   ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
   SubscribeRequestSchema,
-  UnsubscribeRequestSchema
+  UnsubscribeRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import type { 
+import type {
+  BlobResourceContents,
+  EmptyResult,
   ListResourcesResult,
   ListResourceTemplatesResult,
   ReadResourceResult,
-  EmptyResult,
   Resource,
   ResourceTemplate,
   TextResourceContents,
-  BlobResourceContents
 } from "../spec/current_spec.js";
 
 /**
  * Standard MCP Resources Endpoints
- * 
+ *
  * Implements the core MCP resource management protocol endpoints:
  * - resources/list: List available resources
  * - resources/templates/list: List resource templates
@@ -45,7 +45,7 @@ function registerListResources(server: McpServer) {
     ListResourcesRequestSchema,
     async (request): Promise<ListResourcesResult> => {
       const { cursor } = request.params || {};
-      
+
       // Sample resources for demonstration
       const allResources: Resource[] = [
         {
@@ -57,7 +57,7 @@ function registerListResources(server: McpServer) {
           size: 100,
         },
         {
-          name: "test-resource-2", 
+          name: "test-resource-2",
           title: "Test Resource 2",
           uri: "test://resource2",
           description: "Another sample test resource",
@@ -73,11 +73,11 @@ function registerListResources(server: McpServer) {
           size: 150,
         },
       ];
-      
+
       // Simple pagination implementation
       const pageSize = 10;
       let startIndex = 0;
-      
+
       if (cursor) {
         try {
           startIndex = parseInt(cursor, 10);
@@ -85,10 +85,10 @@ function registerListResources(server: McpServer) {
           startIndex = 0;
         }
       }
-      
+
       const endIndex = startIndex + pageSize;
       const resources = allResources.slice(startIndex, endIndex);
-      
+
       const result: ListResourcesResult = {
         resources,
         _meta: {
@@ -97,12 +97,12 @@ function registerListResources(server: McpServer) {
           startIndex,
         },
       };
-      
+
       // Add pagination cursor if there are more results
       if (endIndex < allResources.length) {
         result.nextCursor = endIndex.toString();
       }
-      
+
       return result;
     }
   );
@@ -117,7 +117,7 @@ function registerListResourceTemplates(server: McpServer) {
     ListResourceTemplatesRequestSchema,
     async (request): Promise<ListResourceTemplatesResult> => {
       const { cursor } = request.params || {};
-      
+
       // Sample resource templates
       const allTemplates: ResourceTemplate[] = [
         {
@@ -129,17 +129,17 @@ function registerListResourceTemplates(server: McpServer) {
         },
         {
           name: "api-template",
-          title: "API Resource Template", 
+          title: "API Resource Template",
           uriTemplate: "api:///{endpoint}/{id}",
           description: "Template for API resources",
           mimeType: "application/json",
         },
       ];
-      
+
       // Simple pagination implementation
       const pageSize = 10;
       let startIndex = 0;
-      
+
       if (cursor) {
         try {
           startIndex = parseInt(cursor, 10);
@@ -147,10 +147,10 @@ function registerListResourceTemplates(server: McpServer) {
           startIndex = 0;
         }
       }
-      
+
       const endIndex = startIndex + pageSize;
       const resourceTemplates = allTemplates.slice(startIndex, endIndex);
-      
+
       const result: ListResourceTemplatesResult = {
         resourceTemplates,
         _meta: {
@@ -159,12 +159,12 @@ function registerListResourceTemplates(server: McpServer) {
           startIndex,
         },
       };
-      
+
       // Add pagination cursor if there are more results
       if (endIndex < allTemplates.length) {
         result.nextCursor = endIndex.toString();
       }
-      
+
       return result;
     }
   );
@@ -179,64 +179,76 @@ function registerReadResource(server: McpServer) {
     ReadResourceRequestSchema,
     async (request): Promise<ReadResourceResult> => {
       const { uri } = request.params;
-      
+
       // Sample resource data based on URI
       let contents: (TextResourceContents | BlobResourceContents)[];
-      
+
       if (uri === "test://resource1") {
-        contents = [{
-          uri,
-          text: "This is the content of test resource 1.\nIt contains sample text data.",
-          mimeType: "text/plain",
-          _meta: { 
-            readTime: new Date().toISOString(),
-            size: 54,
+        contents = [
+          {
+            uri,
+            text: "This is the content of test resource 1.\nIt contains sample text data.",
+            mimeType: "text/plain",
+            _meta: {
+              readTime: new Date().toISOString(),
+              size: 54,
+            },
           },
-        }];
+        ];
       } else if (uri === "test://resource2") {
-        contents = [{
-          uri,
-          text: JSON.stringify({
-            message: "This is test resource 2",
-            data: { 
-              value: 42, 
-              active: true,
-              timestamp: new Date().toISOString(),
-            }
-          }, null, 2),
-          mimeType: "application/json",
-          _meta: { 
-            readTime: new Date().toISOString(),
-            size: 120,
+        contents = [
+          {
+            uri,
+            text: JSON.stringify(
+              {
+                message: "This is test resource 2",
+                data: {
+                  value: 42,
+                  active: true,
+                  timestamp: new Date().toISOString(),
+                },
+              },
+              null,
+              2
+            ),
+            mimeType: "application/json",
+            _meta: {
+              readTime: new Date().toISOString(),
+              size: 120,
+            },
           },
-        }];
+        ];
       } else if (uri.startsWith("file:///")) {
         // Sample file resource
         const filename = uri.split("/").pop() || "unknown";
-        contents = [{
-          uri,
-          text: `Content of file: ${filename}\nThis is simulated file content.`,
-          mimeType: "text/plain",
-          _meta: { 
-            readTime: new Date().toISOString(),
-            filename,
+        contents = [
+          {
+            uri,
+            text: `Content of file: ${filename}\nThis is simulated file content.`,
+            mimeType: "text/plain",
+            _meta: {
+              readTime: new Date().toISOString(),
+              filename,
+            },
           },
-        }];
+        ];
       } else if (uri.startsWith("api:///")) {
         // Sample API resource
-        contents = [{
-          uri,
-          blob: Buffer.from("Sample binary data from API").toString("base64"),
-          mimeType: "application/octet-stream",
-          _meta: { 
-            readTime: new Date().toISOString(),
-            apiEndpoint: uri,
+        contents = [
+          {
+            uri,
+            blob: Buffer.from("Sample binary data from API").toString("base64"),
+            mimeType: "application/octet-stream",
+            _meta: {
+              readTime: new Date().toISOString(),
+              apiEndpoint: uri,
+            },
           },
-        }];
+        ];
       } else {
         throw new Error(`Resource not found: ${uri}`);
       }
-      
+
       const result: ReadResourceResult = {
         contents,
         _meta: {
@@ -244,7 +256,7 @@ function registerReadResource(server: McpServer) {
           requestedUri: uri,
         },
       };
-      
+
       return result;
     }
   );
@@ -255,28 +267,25 @@ function registerReadResource(server: McpServer) {
  * Subscribe to notifications when a resource changes
  */
 function registerSubscribeResource(server: McpServer) {
-  server.server.setRequestHandler(
-    SubscribeRequestSchema,
-    async (request): Promise<EmptyResult> => {
-      const { uri } = request.params;
-      
-      // In a real implementation, this would register the subscription
-      // For now, just acknowledge the subscription
-      const result: EmptyResult = {
-        _meta: {
-          subscribedTo: uri,
-          subscriptionTime: new Date().toISOString(),
-          message: `Subscribed to resource updates for: ${uri}`,
-        },
-      };
-      
-      return result;
-    }
-  );
+  server.server.setRequestHandler(SubscribeRequestSchema, async (request): Promise<EmptyResult> => {
+    const { uri } = request.params;
+
+    // In a real implementation, this would register the subscription
+    // For now, just acknowledge the subscription
+    const result: EmptyResult = {
+      _meta: {
+        subscribedTo: uri,
+        subscriptionTime: new Date().toISOString(),
+        message: `Subscribed to resource updates for: ${uri}`,
+      },
+    };
+
+    return result;
+  });
 }
 
 /**
- * resources/unsubscribe endpoint  
+ * resources/unsubscribe endpoint
  * Unsubscribe from resource update notifications
  */
 function registerUnsubscribeResource(server: McpServer) {
@@ -284,7 +293,7 @@ function registerUnsubscribeResource(server: McpServer) {
     UnsubscribeRequestSchema,
     async (request): Promise<EmptyResult> => {
       const { uri } = request.params;
-      
+
       // In a real implementation, this would remove the subscription
       // For now, just acknowledge the unsubscription
       const result: EmptyResult = {
@@ -294,7 +303,7 @@ function registerUnsubscribeResource(server: McpServer) {
           message: `Unsubscribed from resource updates for: ${uri}`,
         },
       };
-      
+
       return result;
     }
   );

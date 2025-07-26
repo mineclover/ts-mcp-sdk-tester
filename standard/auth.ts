@@ -1,17 +1,13 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { InitializeRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import type { 
-  InitializeResult,
-  ServerCapabilities,
-  Implementation
-} from "../spec/current_spec.js";
+import type { Implementation, InitializeResult, ServerCapabilities } from "../spec/current_spec.js";
 import { LATEST_PROTOCOL_VERSION } from "../spec/current_spec.js";
 import { APP_CONFIG } from "./constants.js";
 import { logger } from "./logger.js";
 
 /**
  * Standard MCP Authentication & Initialization Endpoints
- * 
+ *
  * Implements the core MCP authentication protocol endpoints:
  * - initialize: Handle client initialization and capability negotiation
  */
@@ -27,25 +23,20 @@ export function registerAuthEndpoints(server: McpServer) {
  */
 function registerInitialize(server: McpServer) {
   logger.logMethodEntry("registerInitialize", undefined, "auth");
-  
+
   server.server.setRequestHandler(
     InitializeRequestSchema,
     async (request, extra): Promise<InitializeResult> => {
       await logger.logEndpointEntry("initialize", extra.requestId, {
         protocolVersion: request.params.protocolVersion,
-        clientInfo: request.params.clientInfo
+        clientInfo: request.params.clientInfo,
       });
-      
+
       const { protocolVersion, capabilities, clientInfo } = request.params;
-      
+
       // Validate protocol version compatibility
-      const supportedVersions = [
-        APP_CONFIG.protocol,
-        "2025-03-26", 
-        "2024-11-05",
-        "2024-10-07"
-      ];
-      
+      const supportedVersions = [APP_CONFIG.protocol, "2025-03-26", "2024-11-05", "2024-10-07"];
+
       let negotiatedVersion = LATEST_PROTOCOL_VERSION;
       if (supportedVersions.includes(protocolVersion)) {
         negotiatedVersion = protocolVersion;
@@ -53,14 +44,14 @@ function registerInitialize(server: McpServer) {
         // Use the latest version we support
         negotiatedVersion = LATEST_PROTOCOL_VERSION;
       }
-      
+
       // Define server capabilities based on what we implement
       const serverCapabilities: ServerCapabilities = {
         experimental: {
           "mcp-sdk-tester": {
             version: APP_CONFIG.version,
-            features: ["comprehensive-testing", "all-endpoints", "standard-protocol"]
-          }
+            features: ["comprehensive-testing", "all-endpoints", "standard-protocol"],
+          },
         },
         logging: {},
         completions: {},
@@ -75,14 +66,14 @@ function registerInitialize(server: McpServer) {
           listChanged: true,
         },
       };
-      
+
       // Server information
       const serverInfo: Implementation = {
         name: APP_CONFIG.name,
         title: APP_CONFIG.displayName,
         version: APP_CONFIG.version,
       };
-      
+
       // Initialization instructions for the client/LLM
       const instructions = `
 ${APP_CONFIG.displayName} - Standard Protocol Implementation
@@ -120,7 +111,7 @@ All endpoints follow MCP specification standards with:
 - Type-safe parameter and result handling
 - Comprehensive metadata in responses
       `.trim();
-      
+
       const result: InitializeResult = {
         protocolVersion: negotiatedVersion,
         capabilities: serverCapabilities,
@@ -134,7 +125,7 @@ All endpoints follow MCP specification standards with:
           supportedVersions,
         },
       };
-      
+
       await logger.logMethodExit("initialize", { protocolVersion: negotiatedVersion }, "auth");
       return result;
     }
