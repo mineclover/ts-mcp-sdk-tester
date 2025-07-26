@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAuthEndpoints } from "./auth.js";
 import { registerCompletionEndpoints } from "./completion.js";
 import { registerElicitationEndpoints } from "./elicitation.js";
+import { registerLifecycleManagement } from "./lifecycle.js";
 import { registerLoggingEndpoints } from "./logging.js";
 import { registerPingEndpoint } from "./ping.js";
 import { registerPromptsEndpoints } from "./prompts.js";
@@ -25,6 +26,9 @@ export { parseArguments, setupTransport, type TransportOptions } from "./transpo
  */
 
 export function registerStandardEndpoints(server: McpServer) {
+  // Initialize lifecycle management first
+  registerLifecycleManagement(server);
+  
   // Core protocol endpoints
   registerPingEndpoint(server);
   registerAuthEndpoints(server);

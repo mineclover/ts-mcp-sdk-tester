@@ -22,7 +22,7 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "noFallthroughCasesInSwitch": true,
-    "typeRoots": ["./node_modules/@types"],
+    "typeRoots": ["./node_modules/@types", "./standard/types"],
 
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,

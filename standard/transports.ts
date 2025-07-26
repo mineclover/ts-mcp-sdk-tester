@@ -6,6 +6,8 @@ import cors from "cors";
 import express, { type Request, type Response } from "express";
 import { APP_CONFIG, TRANSPORT_CONFIG } from "./constants.js";
 import { ErrorType, getErrorCode, logger } from "./logger.js";
+import { lifecycleManager, getServerStatus } from "./lifecycle.js";
+import { createAuthMiddleware, logAuthEvent } from "./authorization.js";
 /**
  * Transport Management Features
  * Handles different MCP transport types and server setup
@@ -41,6 +43,13 @@ function setupStdioTransport(server: McpServer) {
 
   try {
     const transport = new StdioServerTransport();
+    
+    // Setup transport-specific shutdown handling
+    lifecycleManager.onShutdown(async () => {
+      logger.info("Closing stdio transport...", "transport");
+      transport.close();
+    });
+    
     server.connect(transport);
     logger.info("MCP Server running on stdio transport", "transport");
   } catch (error) {
@@ -55,8 +64,48 @@ function setupStdioTransport(server: McpServer) {
 // Streamable HTTP transport
 function setupStreamableTransport(server: McpServer, port: number) {
   const app = express();
-  app.use(cors({ origin: "*", exposedHeaders: ["Mcp-Session-Id"] }));
-  app.use(express.json());
+  
+  // Security: Restrict CORS to localhost for safety
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    `http://localhost:${port}`,
+    `http://127.0.0.1:${port}`,
+    // Allow MCP Inspector and development tools
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+  ];
+  
+  app.use(cors({ 
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      logger.warning(`Blocked request from unauthorized origin: ${origin}`, "transport");
+      callback(new Error('Not allowed by CORS'));
+    },
+    exposedHeaders: ["Mcp-Session-Id"],
+    credentials: true,
+  }));
+  
+  app.use(express.json({ limit: '10mb' })); // Limit request size
+  
+  // Apply authorization and security middleware
+  const envType = (process.env.NODE_ENV as 'development' | 'production' | 'testing') || 'development';
+  const authMiddleware = createAuthMiddleware({
+    environment: envType,
+    apiKeys: process.env.MCP_API_KEYS?.split(',').filter(Boolean),
+    customRateLimit: {
+      maxRequests: parseInt(process.env.MCP_RATE_LIMIT || '100'),
+      windowMs: parseInt(process.env.MCP_RATE_WINDOW || '60000'),
+    },
+  });
+  
+  authMiddleware.forEach(middleware => app.use(middleware));
 
   // Store transports by session ID
   const transports: Record<string, StreamableHTTPServerTransport> = {};
@@ -64,6 +113,18 @@ function setupStreamableTransport(server: McpServer, port: number) {
   // Modern Streamable HTTP endpoint
   app.all("/mcp", async (req: Request, res: Response) => {
     logger.debug(`Received ${req.method} request to /mcp (Streamable HTTP)`, "transport");
+    
+    // Log authentication event for audit
+    logAuthEvent(req, 'mcp_request', {
+      method: req.method,
+      sessionId: req.headers["mcp-session-id"],
+    });
+    
+    // Auth middleware guarantees req.auth exists after middleware chain
+    // TypeScript will recognize this after auth middleware has run
+    if (req.auth) {
+      logger.debug(`MCP request from ${req.auth.authMethod} client (authenticated: ${req.auth.isAuthenticated})`, "transport");
+    }
 
     try {
       // Check for existing session ID
@@ -109,7 +170,8 @@ function setupStreamableTransport(server: McpServer, port: number) {
       }
 
       // Handle the request with the transport
-      await transport.handleRequest(req, res, req.body);
+      // Type cast to resolve AuthInfo vs AuthContext incompatibility
+      await transport.handleRequest(req as any, res, req.body);
     } catch (error) {
       logger.logServerError(
         error instanceof Error ? error : new Error(String(error)),
@@ -134,18 +196,21 @@ function setupStreamableTransport(server: McpServer, port: number) {
     }
   });
 
-  // Health check endpoint
+  // Health check endpoint with lifecycle status
   app.get("/health", (_req: Request, res: Response) => {
+    const serverStatus = getServerStatus();
     res.json({
-      status: "ok",
+      status: serverStatus.isOperational ? "ok" : "initializing",
       transport: "streamable-http",
       timestamp: new Date().toISOString(),
       protocol: APP_CONFIG.protocol,
+      lifecycle: serverStatus,
     });
   });
 
-  // Server info endpoint
+  // Server info endpoint with lifecycle information
   app.get("/info", (_req: Request, res: Response) => {
+    const serverStatus = getServerStatus();
     res.json({
       name: APP_CONFIG.displayName,
       version: APP_CONFIG.version,
@@ -153,12 +218,18 @@ function setupStreamableTransport(server: McpServer, port: number) {
       protocol: APP_CONFIG.protocol,
       port: port,
       endpoints: TRANSPORT_CONFIG.endpoints,
-      tools: getToolCount(),
+      lifecycle: serverStatus,
+      security: {
+        corsEnabled: true,
+        allowedOrigins: 'localhost only',
+        requestSizeLimit: '10mb',
+      },
     });
   });
 
   // Root endpoint with server information
   app.get("/", (_req: Request, res: Response) => {
+    const serverStatus = getServerStatus();
     res.writeHead(200, { "Content-Type": "text/html" });
     res.end(`
       <!DOCTYPE html>
@@ -179,6 +250,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
       <body>
         <h1>${APP_CONFIG.displayName}</h1>
         <p>Modern MCP server running on port ${port} with <span class="modern">Streamable HTTP Transport</span> (Protocol: ${APP_CONFIG.protocol})</p>
+        <p><strong>Server Status:</strong> ${serverStatus.state} | <strong>Uptime:</strong> ${serverStatus.uptime.toFixed(1)}s</p>
         
         <div class="endpoint">
           <h3>MCP Endpoint</h3>
@@ -192,7 +264,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
         <ul>
           <li><strong>Health Check:</strong> <a href="/health" target="_blank">/health</a></li>
           <li><strong>Server Info:</strong> <a href="/info" target="_blank">/info</a></li>
-          <li><strong>Tools Available:</strong> <span class="tools-count">${getToolCount()} tools</span></li>
+          <li><strong>Status:</strong> <span class="tools-count">${serverStatus.isOperational ? 'Operational' : 'Initializing'}</span></li>
         </ul>
         
         <h2>Available Features</h2>
@@ -226,7 +298,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
     `);
   });
 
-  const httpServer = app.listen(port, () => {
+  const httpServer = app.listen(port, '127.0.0.1', () => {
     logger.info(
       `MCP Server running on http://localhost:${port} (Streamable HTTP transport)`,
       "transport"
@@ -234,22 +306,37 @@ function setupStreamableTransport(server: McpServer, port: number) {
     logger.info(`Protocol: ${APP_CONFIG.protocol}`, "transport");
     logger.info(`Streamable HTTP endpoint: http://localhost:${port}/mcp`, "transport");
     logger.info(`Health check: http://localhost:${port}/health`, "transport");
+    logger.info("Server bound to localhost for security", "transport");
   });
 
-  // Graceful shutdown
-  process.on("SIGINT", () => {
+  // Integrate with lifecycle management for graceful shutdown
+  lifecycleManager.onShutdown(async () => {
     logger.info("Shutting down Streamable HTTP server...", "transport");
-    httpServer.close(() => {
-      process.exit(0);
+    
+    // Close all active transports
+    Object.values(transports).forEach(transport => {
+      try {
+        transport.close();
+      } catch (error) {
+        logger.warning(`Error closing transport: ${error}`, "transport");
+      }
+    });
+    
+    // Close HTTP server
+    return new Promise<void>((resolve) => {
+      httpServer.close((error) => {
+        if (error) {
+          logger.error(`Error closing HTTP server: ${error}`, "transport");
+        } else {
+          logger.info("HTTP server closed successfully", "transport");
+        }
+        resolve();
+      });
     });
   });
 }
 
-// Helper function to get tool count for HTML display
-function getToolCount(): number {
-  // No tools are registered anymore - only standard MCP endpoints
-  return 0;
-}
+// Removed getToolCount function as it's no longer used
 
 export function parseArguments(): TransportOptions {
   const args = process.argv.slice(2);

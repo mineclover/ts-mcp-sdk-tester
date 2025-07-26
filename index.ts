@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { APP_CONFIG } from "./standard/constants.js";
 import { parseArguments, registerStandardEndpoints, setupTransport } from "./standard/index.js";
 import { logger } from "./standard/logger.js";
+import { lifecycleManager } from "./standard/lifecycle.js";
 
 /**
  * MCP SDK Tester - A comprehensive testing server for MCP SDK features
@@ -49,14 +50,16 @@ async function main() {
   const options = parseArguments();
   const server = createServer();
 
+  // Setup shutdown handlers for cleanup
+  lifecycleManager.onShutdown(async () => {
+    logger.info("Performing application cleanup...", "main");
+    // Add any application-specific cleanup here
+  });
+
   setupTransport(server, options);
 }
 
-// Handle server shutdown
-process.on("SIGINT", async () => {
-  logger.info("Shutting down server...", "main");
-  process.exit(0);
-});
+// Lifecycle management handles shutdown automatically
 
 if (import.meta.main) {
   main().catch((error) => {

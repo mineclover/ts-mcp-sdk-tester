@@ -5,6 +5,7 @@ import { LATEST_PROTOCOL_VERSION } from "../spec/current_spec.js";
 import { APP_CONFIG } from "./constants.js";
 import { logger } from "./logger.js";
 import { AUTH_CONFIG } from "./auth-config.js";
+import { lifecycleManager, LifecycleState } from "./lifecycle.js";
 
 /**
  * Standard MCP Authentication & Initialization Endpoints
@@ -41,10 +42,21 @@ function registerInitialize(server: McpServer) {
       let negotiatedVersion = LATEST_PROTOCOL_VERSION;
       if (supportedVersions.includes(protocolVersion as any)) {
         negotiatedVersion = protocolVersion;
+        logger.info(`Protocol version accepted: ${protocolVersion}`, "auth");
       } else {
         // Use the latest version we support
         negotiatedVersion = LATEST_PROTOCOL_VERSION;
+        logger.warning(`Unsupported protocol version ${protocolVersion}, using ${negotiatedVersion}`, "auth");
       }
+      
+      // Log client information for security monitoring
+      logger.info({
+        message: "Client initialization",
+        clientName: clientInfo?.name,
+        clientVersion: clientInfo?.version,
+        protocolVersion: negotiatedVersion,
+        hasCapabilities: !!capabilities,
+      }, "auth");
 
       // Get server capabilities from configuration
       const serverCapabilities: ServerCapabilities = AUTH_CONFIG.capabilities;
@@ -66,10 +78,18 @@ function registerInitialize(server: McpServer) {
           clientCapabilities: capabilities,
           negotiatedFromVersion: protocolVersion,
           supportedVersions,
+          lifecycleState: lifecycleManager.getState(),
         },
       };
 
-      await logger.logMethodExit("initialize", { protocolVersion: negotiatedVersion }, "auth");
+      // Mark initialization phase as complete
+      lifecycleManager.markInitialized();
+
+      await logger.logMethodExit("initialize", { 
+        protocolVersion: negotiatedVersion,
+        lifecycleState: lifecycleManager.getState(),
+      }, "auth");
+      
       return result;
     }
   );
