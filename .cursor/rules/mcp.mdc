@@ -9,8 +9,17 @@ The Model Context Protocol allows applications to provide context for LLMs in a 
 
 - Build MCP clients that can connect to any MCP server
 - Create MCP servers that expose resources, prompts and tools
-- Use standard transports like stdio and SSE
+- Use standard transports like stdio and Streamable HTTP
 - Handle all MCP protocol messages and lifecycle events
+
+## Best Practices
+
+- **Use the recommended API**: Use `registerTool()`, `registerResource()`, and `registerPrompt()` methods instead of the older `tool()`, `resource()`, and `prompt()` methods
+- **Add titles and descriptions**: Always provide meaningful titles and descriptions for better UX
+- **Use completions**: Add intelligent completion support using the `completable()` helper
+- **Handle errors properly**: Return `isError: true` in tool responses for errors
+- **Use ResourceLinks**: Return ResourceLinks from tools instead of embedding large content
+- **Use Streamable HTTP**: Prefer Streamable HTTP transport over the deprecated SSE transport
 
 ## Full Example
 
@@ -21,31 +30,34 @@ import { z } from "zod";
 
 // Create an MCP server
 const server = new McpServer({
-  name: "Demo",
+  name: "demo-server",
   version: "1.0.0"
 });
 
-// Example: Add a BMI calculator
-server.tool(
-  // tool name
+// Example: Add a BMI calculator tool (recommended approach)
+server.registerTool(
   "calculate_bmi",
-  // description
-  "Calculate BMI to see if you are overweight.",
-  // input schema
   {
-    height: z.number().describe("Height in cm"),
-    weight: z.number().describe("Weight in kg"),
+    title: "BMI Calculator",
+    description: "Calculate Body Mass Index to assess if weight is healthy",
+    inputSchema: {
+      height: z.number().describe("Height in cm"),
+      weight: z.number().describe("Weight in kg"),
+    }
   },
-  // tool implementation
   async ({ height, weight }) => ({
-    content: [{ type: "text", text: String(weight / (height * height)) }],
-  }),
+    content: [{ type: "text", text: String(weight / (height / 100 * height / 100)) }],
+  })
 );
 
-// Add a dynamic greeting resource
-server.resource(
+// Add a dynamic greeting resource (recommended approach)
+server.registerResource(
   "greeting",
   new ResourceTemplate("greeting://{name}", { list: undefined }),
+  {
+    title: "Greeting Resource",
+    description: "Dynamic greeting generator for any name"
+  },
   async (uri, { name }) => ({
     contents: [{
       uri: uri.href,
@@ -86,10 +98,15 @@ const server = new McpServer({
 Resources are how you expose data to LLMs. They're similar to GET endpoints in a REST API - they provide data but shouldn't perform significant computation or have side effects:
 
 ```typescript
-// Static resource
-server.resource(
+// Static resource (recommended approach)
+server.registerResource(
   "config",
   "config://app",
+  {
+    title: "Application Config",
+    description: "Application configuration data",
+    mimeType: "text/plain"
+  },
   async (uri) => ({
     contents: [{
       uri: uri.href,
@@ -98,14 +115,45 @@ server.resource(
   })
 );
 
-// Dynamic resource with parameters
-server.resource(
+// Dynamic resource with parameters (recommended approach)
+server.registerResource(
   "user-profile",
   new ResourceTemplate("users://{userId}/profile", { list: undefined }),
+  {
+    title: "User Profile",
+    description: "User profile information"
+  },
   async (uri, { userId }) => ({
     contents: [{
       uri: uri.href,
       text: `Profile data for user ${userId}`
+    }]
+  })
+);
+
+// Resource with context-aware completion
+server.registerResource(
+  "repository",
+  new ResourceTemplate("github://repos/{owner}/{repo}", {
+    list: undefined,
+    complete: {
+      // Provide intelligent completions based on previously resolved parameters
+      repo: (value, context) => {
+        if (context?.arguments?.["owner"] === "org1") {
+          return ["project1", "project2", "project3"].filter(r => r.startsWith(value));
+        }
+        return ["default-repo"].filter(r => r.startsWith(value));
+      }
+    }
+  }),
+  {
+    title: "GitHub Repository",
+    description: "Repository information"
+  },
+  async (uri, { owner, repo }) => ({
+    contents: [{
+      uri: uri.href,
+      text: `Repository: ${owner}/${repo}`
     }]
   })
 );
@@ -116,12 +164,16 @@ server.resource(
 Tools let LLMs take actions through your server. Unlike resources, tools are expected to perform computation and have side effects:
 
 ```typescript
-// Simple tool with parameters
-server.tool(
+// Simple tool with parameters (recommended approach)
+server.registerTool(
   "calculate-bmi",
   {
-    weightKg: z.number(),
-    heightM: z.number()
+    title: "BMI Calculator",
+    description: "Calculate Body Mass Index",
+    inputSchema: {
+      weightKg: z.number(),
+      heightM: z.number()
+    }
   },
   async ({ weightKg, heightM }) => ({
     content: [{
@@ -131,10 +183,14 @@ server.tool(
   })
 );
 
-// Async tool with external API call
-server.tool(
+// Async tool with external API call (recommended approach)
+server.registerTool(
   "fetch-weather",
-  { city: z.string() },
+  {
+    title: "Weather Fetcher",
+    description: "Get weather data for a city",
+    inputSchema: { city: z.string() }
+  },
   async ({ city }) => {
     const response = await fetch(`https://api.weather.com/${city}`);
     const data = await response.text();
@@ -143,16 +199,57 @@ server.tool(
     };
   }
 );
+
+// Tool that returns ResourceLinks
+server.registerTool(
+  "list-files",
+  {
+    title: "List Files",
+    description: "List project files",
+    inputSchema: { pattern: z.string() }
+  },
+  async ({ pattern }) => ({
+    content: [
+      { type: "text", text: `Found files matching "${pattern}":` },
+      // ResourceLinks let tools return references without file content
+      {
+        type: "resource_link",
+        uri: "file:///project/README.md",
+        name: "README.md",
+        mimeType: "text/markdown",
+        description: 'A README file'
+      },
+      {
+        type: "resource_link",
+        uri: "file:///project/src/index.ts",
+        name: "index.ts",
+        mimeType: "text/typescript",
+        description: 'An index file'
+      }
+    ]
+  })
+);
 ```
+
+#### ResourceLinks
+
+Tools can return `ResourceLink` objects to reference resources without embedding their full content. This is essential for performance when dealing with large files or many resources - clients can then selectively read only the resources they need using the provided URIs.
 
 ### Prompts
 
 Prompts are reusable templates that help LLMs interact with your server effectively:
 
 ```typescript
-server.prompt(
+import { completable } from "@modelcontextprotocol/sdk/server/completable.js";
+
+// Simple prompt (recommended approach)
+server.registerPrompt(
   "review-code",
-  { code: z.string() },
+  {
+    title: "Code Review",
+    description: "Review code for best practices and potential issues",
+    argsSchema: { code: z.string() }
+  },
   ({ code }) => ({
     messages: [{
       role: "user",
@@ -163,7 +260,47 @@ server.prompt(
     }]
   })
 );
+
+// Prompt with context-aware completion
+server.registerPrompt(
+  "team-greeting",
+  {
+    title: "Team Greeting",
+    description: "Generate a greeting for team members",
+    argsSchema: {
+      department: completable(z.string(), (value) => {
+        // Department suggestions
+        return ["engineering", "sales", "marketing", "support"].filter(d => d.startsWith(value));
+      }),
+      name: completable(z.string(), (value, context) => {
+        // Name suggestions based on selected department
+        const department = context?.arguments?.["department"];
+        if (department === "engineering") {
+          return ["Alice", "Bob", "Charlie"].filter(n => n.startsWith(value));
+        } else if (department === "sales") {
+          return ["David", "Eve", "Frank"].filter(n => n.startsWith(value));
+        } else if (department === "marketing") {
+          return ["Grace", "Henry", "Iris"].filter(n => n.startsWith(value));
+        }
+        return ["Guest"].filter(n => n.startsWith(value));
+      })
+    }
+  },
+  ({ department, name }) => ({
+    messages: [{
+      role: "assistant",
+      content: {
+        type: "text",
+        text: `Hello ${name}, welcome to the ${department} team!`
+      }
+    }]
+  })
+);
 ```
+
+### Completions
+
+MCP supports argument completions to help users fill in prompt arguments and resource template parameters. Use the `completable()` helper to add intelligent completion support to your prompt arguments.
 
 ## Running Your Server
 
@@ -188,38 +325,97 @@ const transport = new StdioServerTransport();
 await server.connect(transport);
 ```
 
-### HTTP with SSE
+### Streamable HTTP
 
-For remote servers, start a web server with a Server-Sent Events (SSE) endpoint, and a separate endpoint for the client to send its messages to:
+For remote servers, use the modern Streamable HTTP transport that handles both client requests and server-to-client notifications:
 
 ```typescript
 import express from "express";
+import { randomUUID } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-
-const server = new McpServer({
-  name: "example-server",
-  version: "1.0.0"
-});
-
-// ... set up server resources, tools, and prompts ...
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 
 const app = express();
+app.use(express.json());
 
-app.get("/sse", async (req, res) => {
-  const transport = new SSEServerTransport("/messages", res);
-  await server.connect(transport);
+// Map to store transports by session ID
+const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+
+// Handle POST requests for client-to-server communication
+app.post('/mcp', async (req, res) => {
+  const sessionId = req.headers['mcp-session-id'] as string | undefined;
+  let transport: StreamableHTTPServerTransport;
+
+  if (sessionId && transports[sessionId]) {
+    // Reuse existing transport
+    transport = transports[sessionId];
+  } else if (!sessionId && isInitializeRequest(req.body)) {
+    // New initialization request
+    transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+      onsessioninitialized: (sessionId) => {
+        transports[sessionId] = transport;
+      },
+      // DNS rebinding protection
+      enableDnsRebindingProtection: true,
+      allowedHosts: ['127.0.0.1'],
+    });
+
+    transport.onclose = () => {
+      if (transport.sessionId) {
+        delete transports[transport.sessionId];
+      }
+    };
+
+    const server = new McpServer({
+      name: "example-server",
+      version: "1.0.0"
+    });
+
+    // ... set up server resources, tools, and prompts ...
+
+    await server.connect(transport);
+  } else {
+    res.status(400).json({
+      jsonrpc: '2.0',
+      error: { code: -32000, message: 'Bad Request: No valid session ID provided' },
+      id: null,
+    });
+    return;
+  }
+
+  await transport.handleRequest(req, res, req.body);
 });
 
-app.post("/messages", async (req, res) => {
-  // Note: to support multiple simultaneous connections, these messages will
-  // need to be routed to a specific matching transport. (This logic isn't
-  // implemented here, for simplicity.)
-  await transport.handlePostMessage(req, res);
+// Handle GET requests for server-to-client notifications via SSE
+app.get('/mcp', async (req, res) => {
+  const sessionId = req.headers['mcp-session-id'] as string | undefined;
+  if (!sessionId || !transports[sessionId]) {
+    res.status(400).send('Invalid or missing session ID');
+    return;
+  }
+  
+  const transport = transports[sessionId];
+  await transport.handleRequest(req, res);
 });
 
-app.listen(3001);
+// Handle DELETE requests for session termination
+app.delete('/mcp', async (req, res) => {
+  const sessionId = req.headers['mcp-session-id'] as string | undefined;
+  if (!sessionId || !transports[sessionId]) {
+    res.status(400).send('Invalid or missing session ID');
+    return;
+  }
+  
+  const transport = transports[sessionId];
+  await transport.handleRequest(req, res);
+});
+
+app.listen(3000);
 ```
+
+**Note**: The SSE transport is deprecated in favor of Streamable HTTP. New implementations should use Streamable HTTP.
 
 ### Testing and Debugging
 
@@ -236,13 +432,17 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { z } from "zod";
 
 const server = new McpServer({
-  name: "Echo",
+  name: "echo-server",
   version: "1.0.0"
 });
 
-server.resource(
+server.registerResource(
   "echo",
   new ResourceTemplate("echo://{message}", { list: undefined }),
+  {
+    title: "Echo Resource",
+    description: "Echoes back messages as resources"
+  },
   async (uri, { message }) => ({
     contents: [{
       uri: uri.href,
@@ -251,17 +451,25 @@ server.resource(
   })
 );
 
-server.tool(
+server.registerTool(
   "echo",
-  { message: z.string() },
+  {
+    title: "Echo Tool",
+    description: "Echoes back the provided message",
+    inputSchema: { message: z.string() }
+  },
   async ({ message }) => ({
     content: [{ type: "text", text: `Tool echo: ${message}` }]
   })
 );
 
-server.prompt(
+server.registerPrompt(
   "echo",
-  { message: z.string() },
+  {
+    title: "Echo Prompt",
+    description: "Creates a prompt to process a message",
+    argsSchema: { message: z.string() }
+  },
   ({ message }) => ({
     messages: [{
       role: "user",
@@ -285,7 +493,7 @@ import { promisify } from "util";
 import { z } from "zod";
 
 const server = new McpServer({
-  name: "SQLite Explorer",
+  name: "sqlite-explorer",
   version: "1.0.0"
 });
 
@@ -298,9 +506,14 @@ const getDb = () => {
   };
 };
 
-server.resource(
+server.registerResource(
   "schema",
   "schema://main",
+  {
+    title: "Database Schema",
+    description: "SQLite database schema",
+    mimeType: "text/plain"
+  },
   async (uri) => {
     const db = getDb();
     try {
@@ -319,9 +532,13 @@ server.resource(
   }
 );
 
-server.tool(
+server.registerTool(
   "query",
-  { sql: z.string() },
+  {
+    title: "SQL Query",
+    description: "Execute SQL queries on the database",
+    inputSchema: { sql: z.string() }
+  },
   async ({ sql }) => {
     const db = getDb();
     try {
@@ -425,13 +642,6 @@ const client = new Client(
   {
     name: "example-client",
     version: "1.0.0"
-  },
-  {
-    capabilities: {
-      prompts: {},
-      resources: {},
-      tools: {}
-    }
   }
 );
 
@@ -441,21 +651,43 @@ await client.connect(transport);
 const prompts = await client.listPrompts();
 
 // Get a prompt
-const prompt = await client.getPrompt("example-prompt", {
-  arg1: "value"
+const prompt = await client.getPrompt({
+  name: "example-prompt",
+  arguments: {
+    arg1: "value"
+  }
 });
 
 // List resources
 const resources = await client.listResources();
 
 // Read a resource
-const resource = await client.readResource("file:///example.txt");
+const resource = await client.readResource({
+  uri: "file:///example.txt"
+});
 
 // Call a tool
 const result = await client.callTool({
   name: "example-tool",
   arguments: {
     arg1: "value"
+  }
+});
+
+// Request completions for any argument
+const completions = await client.complete({
+  ref: {
+    type: "ref/prompt",  // or "ref/resource"
+    name: "example"      // or uri: "template://..."
+  },
+  argument: {
+    name: "argumentName",
+    value: "partial"     // What the user has typed so far
+  },
+  context: {             // Optional: Include previously resolved arguments
+    arguments: {
+      previousArg: "value"
+    }
   }
 });
 ```
