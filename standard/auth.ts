@@ -6,6 +6,7 @@ import type {
   Implementation
 } from "../spec/current_spec.js";
 import { LATEST_PROTOCOL_VERSION } from "../spec/current_spec.js";
+import { APP_CONFIG } from "./constants.js";
 
 /**
  * Standard MCP Authentication & Initialization Endpoints
@@ -30,7 +31,7 @@ function registerInitialize(server: McpServer) {
       
       // Validate protocol version compatibility
       const supportedVersions = [
-        "2025-06-18",
+        APP_CONFIG.protocol,
         "2025-03-26", 
         "2024-11-05",
         "2024-10-07"
@@ -48,7 +49,7 @@ function registerInitialize(server: McpServer) {
       const serverCapabilities: ServerCapabilities = {
         experimental: {
           "mcp-sdk-tester": {
-            version: "1.0.0",
+            version: APP_CONFIG.version,
             features: ["comprehensive-testing", "all-endpoints", "standard-protocol"]
           }
         },
@@ -68,14 +69,14 @@ function registerInitialize(server: McpServer) {
       
       // Server information
       const serverInfo: Implementation = {
-        name: "mcp-sdk-tester",
-        title: "MCP SDK Comprehensive Tester",
-        version: "1.0.0",
+        name: APP_CONFIG.name,
+        title: APP_CONFIG.displayName,
+        version: APP_CONFIG.version,
       };
       
       // Initialization instructions for the client/LLM
       const instructions = `
-MCP SDK Comprehensive Tester - Standard Protocol Implementation
+${APP_CONFIG.displayName} - Standard Protocol Implementation
 
 This server implements all standard MCP specification endpoints:
 

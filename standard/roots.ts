@@ -23,7 +23,7 @@ export function registerRootsEndpoints(server: McpServer) {
 function registerListRoots(server: McpServer) {
   server.server.setRequestHandler(
     ListRootsRequestSchema,
-    async (request): Promise<ListRootsResult> => {
+    async (): Promise<ListRootsResult> => {
       // This is a server-to-client request, so in a real implementation,
       // the server would send this request to the client to get available roots.
       // For testing purposes, we'll simulate a response.

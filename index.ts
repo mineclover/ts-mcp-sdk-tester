@@ -1,22 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerContentFeatures } from "./features/content/index.js";
-import { registerNotificationFeatures } from "./features/notifications/index.js";
-import { registerPromptFeatures } from "./features/prompts/index.js";
-import { registerResourceFeatures } from "./features/resources/index.js";
-// Import all modular features
-import { registerServerFeatures } from "./features/server/index.js";
-import { registerToolFeatures } from "./features/tools/index.js";
-import { parseArguments, setupTransport, registerTransportFeatures } from "./features/transports/index.js";
-// Import new MCP spec endpoint features
-import { registerPingFeatures } from "./features/ping/index.js";
-import { registerSamplingFeatures } from "./features/sampling/index.js";
-import { registerElicitationFeatures } from "./features/elicitation/index.js";
-import { registerRootsFeatures } from "./features/roots/index.js";
-import { registerAuthFeatures } from "./features/auth/index.js";
-import { registerLoggingFeatures } from "./features/logging/index.js";
-import { registerCompletionFeatures } from "./features/completion/index.js";
-// Import standard MCP protocol endpoints
-import { registerStandardEndpoints } from "./standard/index.js";
+import { registerStandardEndpoints, parseArguments, setupTransport } from "./standard/index.js";
+import { APP_CONFIG } from "./standard/constants.js";
 
 /**
  * MCP SDK Tester - A comprehensive testing server for MCP SDK features
@@ -28,8 +12,8 @@ import { registerStandardEndpoints } from "./standard/index.js";
 function createServer() {
   const server = new McpServer(
     {
-      name: "MCP SDK Tester",
-      version: "1.0.0",
+      name: APP_CONFIG.displayName,
+      version: APP_CONFIG.version,
     },
     { 
       capabilities: { 
@@ -55,115 +39,7 @@ function createServer() {
 
   // Register standard MCP protocol endpoints
   registerStandardEndpoints(server);
-  
-  // Register all modular features
-  registerServerFeatures(server);
-  registerResourceFeatures(server);
-  registerToolFeatures(server);
-  registerPromptFeatures(server);
-  registerContentFeatures(server);
-  registerNotificationFeatures(server);
-  registerTransportFeatures(server);
-  
-  // Register new MCP spec endpoint features
-  registerPingFeatures(server);
-  registerSamplingFeatures(server);
-  registerElicitationFeatures(server);
-  registerRootsFeatures(server);
-  registerAuthFeatures(server);
-  registerLoggingFeatures(server);
-  registerCompletionFeatures(server);
 
-  // Add comprehensive test tool
-  server.registerTool(
-    "run_comprehensive_test",
-    {
-      title: "Run Comprehensive Test",
-      description: "Run a comprehensive test of all MCP server features",
-      inputSchema: {},
-    },
-    async () => {
-      try {
-        const results: string[] = [];
-
-        // Test server connection
-        results.push(`Server connected: ${server.isConnected()}`);
-
-        // Test resource registration
-        server.registerResource(
-          "test-resource",
-          "test://resource",
-          {
-            title: "Test Resource",
-            description: "Test resource for comprehensive testing",
-          },
-          async (uri: URL) => ({
-            contents: [{ uri: uri.href, text: "Test content" }],
-          })
-        );
-        results.push("✓ Static resource registered");
-
-        // Test tool registration
-        server.registerTool(
-          "test-tool",
-          {
-            title: "Test Tool",
-            description: "Test tool",
-            inputSchema: {},
-          },
-          async () => ({
-            content: [{ type: "text" as const, text: "Test tool executed" }],
-          })
-        );
-        results.push("✓ Tool registered");
-
-        // Test prompt registration
-        server.registerPrompt(
-          "test-prompt",
-          {
-            title: "Test Prompt",
-            description: "Test prompt",
-            argsSchema: {},
-          },
-          () => ({
-            messages: [
-              { role: "user" as const, content: { type: "text" as const, text: "Test prompt" } },
-            ],
-          })
-        );
-        results.push("✓ Prompt registered");
-
-        // Test notifications
-        server.sendResourceListChanged();
-        results.push("✓ Resource list changed notification sent");
-
-        server.sendToolListChanged();
-        results.push("✓ Tool list changed notification sent");
-
-        server.sendPromptListChanged();
-        results.push("✓ Prompt list changed notification sent");
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Comprehensive test completed:\n${results.join("\n")}`,
-            },
-          ],
-        };
-      } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Error running comprehensive test: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-    }
-  );
 
   return server;
 }

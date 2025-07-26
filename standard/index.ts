@@ -10,6 +10,12 @@ import { registerAuthEndpoints } from "./auth.js";
 import { registerLoggingEndpoints } from "./logging.js";
 import { registerCompletionEndpoints } from "./completion.js";
 
+// Re-export transport utilities
+export { parseArguments, setupTransport, type TransportOptions } from "./transports.js";
+
+// Re-export constants
+export { APP_CONFIG, TRANSPORT_CONFIG } from "./constants.js";
+
 /**
  * Standard MCP Protocol Endpoints
  * 

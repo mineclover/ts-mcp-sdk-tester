@@ -1,9 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CreateMessageRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  CreateMessageResult,
-  SamplingMessage,
-  ModelPreferences
+  CreateMessageResult
 } from "../spec/current_spec.js";
 
 /**
@@ -31,9 +29,7 @@ function registerCreateMessage(server: McpServer) {
         modelPreferences,
         temperature,
         maxTokens,
-        stopSequences,
-        includeContext,
-        metadata
+        includeContext
       } = request.params;
       
       // This is a server-to-client request, so in a real implementation,

@@ -1,9 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CompleteRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  CompleteResult,
-  PromptReference,
-  ResourceTemplateReference
+  CompleteResult
 } from "../spec/current_spec.js";
 
 /**

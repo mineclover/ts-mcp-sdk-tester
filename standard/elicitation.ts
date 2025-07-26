@@ -1,8 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  ElicitResult,
-  PrimitiveSchemaDefinition
+  ElicitResult
 } from "../spec/current_spec.js";
 
 /**

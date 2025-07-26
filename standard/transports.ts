@@ -4,17 +4,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import cors from "cors";
 import express, { type Request, type Response } from "express";
-import { registerTestTransportCapabilities } from "./test-transport-capabilities.js";
-
+import { APP_CONFIG, TRANSPORT_CONFIG } from "./constants.js";
 /**
  * Transport Management Features
- * Handles different MCP transport types and server setup with backwards compatibility
+ * Handles different MCP transport types and server setup
  */
-
-export function registerTransportFeatures(server: McpServer) {
-  // Register transport testing tools
-  registerTestTransportCapabilities(server);
-}
 
 export interface TransportOptions {
   port?: number;
@@ -32,7 +26,7 @@ export function setupTransport(server: McpServer, options: TransportOptions = {}
       setupStdioTransport(server);
       break;
     default:
-      setupStreamableTransport(server, port || 3000);
+      setupStreamableTransport(server, port || TRANSPORT_CONFIG.defaultPort);
       break;
   }
 }
@@ -88,7 +82,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
       } else {
         // Invalid request
         res.status(400).json({
-          jsonrpc: "2.0",
+          jsonrpc: APP_CONFIG.jsonrpc,
           error: {
             code: -32000,
             message: "Bad Request: No valid session ID provided",
@@ -104,7 +98,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
       console.error("Error handling Streamable HTTP request:", error);
       if (!res.headersSent) {
         res.status(500).json({
-          jsonrpc: "2.0",
+          jsonrpc: APP_CONFIG.jsonrpc,
           error: {
             code: -32603,
             message: "Internal server error",
@@ -121,23 +115,19 @@ function setupStreamableTransport(server: McpServer, port: number) {
       status: "ok",
       transport: "streamable-http",
       timestamp: new Date().toISOString(),
-      protocol: "2025-03-26",
+      protocol: APP_CONFIG.protocol,
     });
   });
 
   // Server info endpoint
   app.get("/info", (_req: Request, res: Response) => {
     res.json({
-      name: "MCP SDK Tester",
-      version: "1.0.0",
+      name: APP_CONFIG.displayName,
+      version: APP_CONFIG.version,
       transport: "streamable-http",
-      protocol: "2025-03-26",
+      protocol: APP_CONFIG.protocol,
       port: port,
-      endpoints: {
-        mcp: "/mcp",
-        health: "/health",
-        info: "/info",
-      },
+      endpoints: TRANSPORT_CONFIG.endpoints,
       tools: getToolCount(),
     });
   });
@@ -149,7 +139,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>MCP SDK Tester</title>
+        <title>${APP_CONFIG.displayName}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
           .modern { color: #28a745; font-weight: bold; }
@@ -162,51 +152,39 @@ function setupStreamableTransport(server: McpServer, port: number) {
         </style>
       </head>
       <body>
-        <h1>🚀 MCP SDK Tester</h1>
-        <p>Modern MCP server running on port ${port} with <span class="modern">Streamable HTTP Transport</span> (Protocol: 2025-03-26)</p>
+        <h1>${APP_CONFIG.displayName}</h1>
+        <p>Modern MCP server running on port ${port} with <span class="modern">Streamable HTTP Transport</span> (Protocol: ${APP_CONFIG.protocol})</p>
         
         <div class="endpoint">
-          <h3>🔗 MCP Endpoint</h3>
+          <h3>MCP Endpoint</h3>
           <strong>Streamable HTTP Transport</strong><br>
           Endpoint: <code>http://localhost:${port}/mcp</code><br>
-          Protocol: 2025-03-26<br>
+          Protocol: ${APP_CONFIG.protocol}<br>
           Usage: Modern MCP clients and tools
         </div>
         
-        <h2>📊 Server Information</h2>
+        <h2>Server Information</h2>
         <ul>
           <li><strong>Health Check:</strong> <a href="/health" target="_blank">/health</a></li>
           <li><strong>Server Info:</strong> <a href="/info" target="_blank">/info</a></li>
           <li><strong>Tools Available:</strong> <span class="tools-count">${getToolCount()} tools</span></li>
         </ul>
         
-        <h2>🛠️ Available Features</h2>
+        <h2>Available Features</h2>
         <div class="feature">
-          <strong>Server Management</strong><br>
-          Connection testing, server information, status monitoring
+          <strong>Standard MCP Protocol</strong><br>
+          Full MCP specification compliance with tools, resources, prompts, and advanced features
         </div>
         <div class="feature">
-          <strong>Resource Testing</strong><br>
-          Simple resources, template resources with autocomplete, rich content types
+          <strong>Multi-Transport Support</strong><br>
+          Stdio and Streamable HTTP transports for flexible integration
         </div>
         <div class="feature">
-          <strong>Tool Testing</strong><br>
-          Simple tools, parameterized tools, advanced tools with annotations, async operations
-        </div>
-        <div class="feature">
-          <strong>Prompt Testing</strong><br>
-          Simple prompts, parameterized prompts, conversation flows, dynamic generation
-        </div>
-        <div class="feature">
-          <strong>Content Type Testing</strong><br>
-          Text, image, audio, resource content types, mixed content, large content handling
-        </div>
-        <div class="feature">
-          <strong>Notification Testing</strong><br>
-          List change notifications, timing tests, registration events
+          <strong>Environment Setup</strong><br>
+          Clean MCP server implementation for testing and development
         </div>
         
-        <h2>💡 Usage Examples</h2>
+        <h2>Usage Examples</h2>
         <div class="endpoint">
           <h4>Using MCP Inspector</h4>
           <code>npx @modelcontextprotocol/inspector http://localhost:${port}/mcp</code>
@@ -214,10 +192,10 @@ function setupStreamableTransport(server: McpServer, port: number) {
         
         <div class="endpoint">
           <h4>Direct HTTP Requests</h4>
-          <code>curl -X POST http://localhost:${port}/mcp -H "Content-Type: application/json" -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'</code>
+          <code>curl -X POST http://localhost:${port}/mcp -H "Content-Type: application/json" -d '{"jsonrpc": "${APP_CONFIG.jsonrpc}", "id": 1, "method": "tools/list"}'</code>
         </div>
         
-        <p><em>This server provides comprehensive testing capabilities for all MCP SDK features using the modern Streamable HTTP transport.</em></p>
+        <p><em>This server provides a clean MCP implementation with standard protocol compliance for testing and development.</em></p>
       </body>
       </html>
     `);
@@ -225,7 +203,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
 
   const httpServer = app.listen(port, () => {
     console.error(`MCP Server running on http://localhost:${port} (Streamable HTTP transport)`);
-    console.error(`Protocol: 2025-03-26`);
+    console.error(`Protocol: ${APP_CONFIG.protocol}`);
     console.error(`Streamable HTTP endpoint: http://localhost:${port}/mcp`);
     console.error(`Health check: http://localhost:${port}/health`);
   });
@@ -241,23 +219,8 @@ function setupStreamableTransport(server: McpServer, port: number) {
 
 // Helper function to get tool count for HTML display
 function getToolCount(): number {
-  // Return the total number of tools available
-  // Based on our comprehensive implementation:
-  // Server: 10 tools (check_server_connection, get_server_info, close_server_connection, 
-  //                  get_transport_info, get_registry_details, clear_all_registrations,
-  //                  validate_registrations, get_performance_metrics, health_check, test_error_handling)
-  // Tools: 5 tools (register_simple_tool, register_parameterized_tool, register_advanced_tool, 
-  //                 register_async_tool, list_registered_tools)
-  // Resources: 4 tools (register_simple_resource, register_template_resource, 
-  //                    register_rich_resource, list_registered_resources)
-  // Prompts: 5 tools (register_simple_prompt, register_parameterized_prompt, register_dynamic_prompt,
-  //                   register_conversation_prompt, list_registered_prompts)
-  // Notifications: 6 tools (send_resource_list_changed, send_prompt_list_changed, send_tool_list_changed,
-  //                         send_all_list_changed, test_notification_after_registration, test_notification_timing)
-  // Content: 6 tools (test_text_content, test_image_content, test_audio_content, 
-  //                   test_mixed_content, test_large_content, test_content_metadata)
-  // Transports: 1 tool (test_transport_capabilities) - if we add it
-  return 37; // Updated based on our comprehensive modular implementation
+  // No tools are registered anymore - only standard MCP endpoints
+  return 0;
 }
 
 export function parseArguments(): TransportOptions {

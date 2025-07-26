@@ -12,7 +12,7 @@ import type { EmptyResult } from "../spec/current_spec.js";
 export function registerPingEndpoint(server: McpServer) {
   server.server.setRequestHandler(
     PingRequestSchema,
-    async (request): Promise<EmptyResult> => {
+    async (): Promise<EmptyResult> => {
       // Simply return empty result to indicate the server is alive
       const result: EmptyResult = {
         _meta: {

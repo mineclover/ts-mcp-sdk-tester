@@ -1,8 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SetLevelRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { 
-  EmptyResult,
-  LoggingLevel
+  EmptyResult
 } from "../spec/current_spec.js";
 
 /**
