@@ -7,6 +7,7 @@ import {
   METHOD_NOT_FOUND,
   PARSE_ERROR,
 } from "../spec/current_spec.js";
+import { sessionLogger, type SessionAwareLogData } from "./otel-session.js";
 
 // Define log data type
 type LogData = string | number | boolean | object | null | undefined;
@@ -127,6 +128,7 @@ export class Logger {
   private isClientConnected = false;
   private sensitiveDataFilterEnabled = true;
   private rateLimitingEnabled = true;
+  private otelSessionEnabled = true;
 
   // Log level severity mapping (higher number = more severe)
   private static readonly LEVEL_SEVERITY: Record<LoggingLevel, number> = {
@@ -184,6 +186,68 @@ export class Logger {
       enabled,
       timestamp: new Date().toISOString(),
     }, "logger");
+  }
+  
+  /**
+   * Enable or disable OTel session tracking
+   */
+  setOTelSession(enabled: boolean) {
+    this.otelSessionEnabled = enabled;
+    this.info({
+      message: "OTel session tracking changed",
+      enabled,
+      timestamp: new Date().toISOString(),
+    }, "logger");
+  }
+  
+  /**
+   * Set session context for current operations
+   */
+  setSessionContext(sessionId: string) {
+    if (this.otelSessionEnabled) {
+      sessionLogger.setSessionContext(sessionId);
+      this.debug({
+        message: "Session context set",
+        sessionId,
+        timestamp: new Date().toISOString(),
+      }, "session");
+    }
+  }
+  
+  /**
+   * Start operation tracing
+   */
+  startOperation(operationName: string, attributes?: Record<string, string | number | boolean>): string | null {
+    if (!this.otelSessionEnabled) {
+      return null;
+    }
+    
+    const traceId = sessionLogger.startOperation(operationName, attributes);
+    if (traceId) {
+      sessionLogger.setTraceContext(traceId);
+      this.debug({
+        message: "Operation trace started",
+        operationName,
+        traceId,
+        attributes,
+      }, "trace");
+    }
+    
+    return traceId;
+  }
+  
+  /**
+   * End operation tracing
+   */
+  endOperation(traceId: string, attributes?: Record<string, string | number | boolean>) {
+    if (this.otelSessionEnabled && traceId) {
+      sessionLogger.endOperation(traceId, attributes);
+      this.debug({
+        message: "Operation trace ended",
+        traceId,
+        attributes,
+      }, "trace");
+    }
   }
 
   /**
@@ -346,8 +410,14 @@ export class Logger {
       return;
     }
 
+    // Enhance with session and trace context if enabled
+    let enhancedData = data;
+    if (this.otelSessionEnabled) {
+      enhancedData = sessionLogger.enhanceLogData(data, logger);
+    }
+
     // Filter sensitive data
-    const filteredData = this.filterSensitiveData(data);
+    const filteredData = this.filterSensitiveData(enhancedData);
 
     // Always output to console for server-side debugging
     const consoleMessage = this.formatConsoleMessage(level, logger, filteredData);
@@ -444,12 +514,43 @@ export class Logger {
   }
 
   /**
-   * Log MCP endpoint entry (INFO level)
+   * Log MCP endpoint entry (INFO level) with automatic operation tracing
    */
-  async logEndpointEntry(endpoint: string, requestId?: string | number, params?: unknown) {
+  async logEndpointEntry(endpoint: string, requestId?: string | number, params?: unknown): Promise<string | null> {
     const idStr = requestId ? `[${requestId}]` : "";
     const paramInfo = params ? ` ${JSON.stringify(params).substring(0, 100)}` : "";
+    
+    // Start operation tracing for endpoint
+    const traceId = this.startOperation(`mcp.${endpoint}`, {
+      'mcp.endpoint': endpoint,
+      'mcp.request.id': requestId ? String(requestId) : 'unknown',
+      ...this.extractMcpAttributes(endpoint, params),
+    });
+    
     await this.info(`🔌 ${endpoint} triggered${idStr}${paramInfo}`, "endpoint");
+    return traceId;
+  }
+  
+  /**
+   * Extract MCP-specific attributes from endpoint and parameters
+   */
+  private extractMcpAttributes(endpoint: string, params?: unknown): Record<string, string | number | boolean> {
+    const attributes: Record<string, string | number | boolean> = {};
+    
+    if (params && typeof params === 'object' && params !== null) {
+      const p = params as Record<string, unknown>;
+      
+      // Extract common MCP attributes
+      if (p.uri && typeof p.uri === 'string') attributes['mcp.resource.uri'] = p.uri;
+      if (p.name && typeof p.name === 'string') {
+        if (endpoint.includes('tool')) attributes['mcp.tool.name'] = p.name;
+        else if (endpoint.includes('prompt')) attributes['mcp.prompt.name'] = p.name;
+      }
+      if (p.cursor && typeof p.cursor === 'string') attributes['mcp.request.cursor'] = p.cursor;
+      if (typeof p.hasMore === 'boolean') attributes['mcp.response.has_more'] = p.hasMore;
+    }
+    
+    return attributes;
   }
 
   /**
@@ -497,13 +598,76 @@ export class Logger {
   }
 
   /**
-   * Log method exit with result (DEBUG level)
+   * Log method exit with result (DEBUG level) and end operation tracing
    */
-  async logMethodExit(methodName: string, result?: unknown, loggerName = "method") {
+  async logMethodExit(methodName: string, result?: unknown, loggerName = "method", traceId?: string | null) {
     if (this.shouldLog("debug")) {
       const resultStr = result ? JSON.stringify(result).substring(0, 100) : "void";
       await this.debug(`← ${methodName} → ${resultStr}`, loggerName);
     }
+    
+    // End operation tracing if traceId provided
+    if (traceId) {
+      const attributes: Record<string, string | number | boolean> = {
+        'mcp.method.result': result ? 'success' : 'void',
+      };
+      
+      // Extract performance metrics from result
+      if (result && typeof result === 'object' && result !== null) {
+        const r = result as Record<string, unknown>;
+        if (typeof r.responseTimeMs === 'number') {
+          attributes['mcp.response.time.ms'] = r.responseTimeMs;
+        }
+        if (typeof r.requestId === 'string' || typeof r.requestId === 'number') {
+          attributes['mcp.request.id'] = String(r.requestId);
+        }
+      }
+      
+      this.endOperation(traceId, attributes);
+    }
+  }
+  
+  /**
+   * Get session and trace statistics
+   */
+  getOTelStats(): {
+    sessionEnabled: boolean;
+    sessionStats: {
+      activeSessions: number;
+      activeTraces: number;
+      sessions: Array<{
+        sessionId: string;
+        clientId?: string;
+        transportType: string;
+        uptime: number;
+      }>;
+    };
+  } {
+    if (!this.otelSessionEnabled) {
+      return {
+        sessionEnabled: false,
+        sessionStats: {
+          activeSessions: 0,
+          activeTraces: 0,
+          sessions: [],
+        },
+      };
+    }
+    
+    const stats = sessionLogger.getSessionStats();
+    return {
+      sessionEnabled: true,
+      sessionStats: {
+        activeSessions: stats.activeSessions,
+        activeTraces: stats.activeTraces,
+        sessions: stats.sessions.map(s => ({
+          sessionId: s.sessionId,
+          clientId: s.clientId,
+          transportType: s.transportType,
+          uptime: Date.now() - s.startTime,
+        })),
+      },
+    };
   }
 }
 

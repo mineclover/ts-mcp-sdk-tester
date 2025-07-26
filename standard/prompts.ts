@@ -41,7 +41,7 @@ function registerListPrompts(server: McpServer) {
   server.server.setRequestHandler(
     ListPromptsRequestSchema,
     async (request, extra): Promise<ListPromptsResult> => {
-      await logger.logEndpointEntry("prompts/list", extra.requestId, {
+      const traceId = await logger.logEndpointEntry("prompts/list", extra.requestId, {
         cursor: request.params?.cursor ? "[present]" : "[none]",
       });
 
@@ -74,7 +74,7 @@ function registerListPrompts(server: McpServer) {
           promptCount: result.prompts.length,
           totalCount: result._meta?.totalCount,
           hasMore: result._meta?.hasMore,
-        }, "prompts");
+        }, "prompts", traceId);
 
         return result;
       } catch (error) {
@@ -101,7 +101,7 @@ function registerGetPrompt(server: McpServer) {
     async (request, extra): Promise<GetPromptResult> => {
       const { name, arguments: args } = request.params;
       
-      await logger.logEndpointEntry("prompts/get", extra.requestId, {
+      const traceId = await logger.logEndpointEntry("prompts/get", extra.requestId, {
         promptName: name,
         hasArguments: !!args && Object.keys(args).length > 0,
       });
@@ -142,7 +142,7 @@ function registerGetPrompt(server: McpServer) {
           promptName: name,
           messageCount: messages.length,
           argumentCount: args ? Object.keys(args).length : 0,
-        }, "prompts");
+        }, "prompts", traceId);
 
         return result;
       } catch (error) {
