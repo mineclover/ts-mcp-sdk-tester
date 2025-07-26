@@ -181,7 +181,7 @@ export function registerHealthCheck(server: McpServer) {
           content: [
             {
               type: "text" as const,
-              text: `${statusIcon[healthReport.overallStatus]} Health Check Results:\n` +
+              text: `${statusIcon[healthReport.overallStatus as keyof typeof statusIcon]} Health Check Results:\n` +
                     `- Overall Status: ${healthReport.overallStatus.toUpperCase()}\n` +
                     `- Checks Passed: ${healthyCount}/${checks.length}\n` +
                     `- Warnings: ${warningCount}\n` +

@@ -50,15 +50,18 @@ export function registerGetRegistryDetails(server: McpServer) {
           };
           
           if (params.includeDetails) {
-            registryInfo.tools.details = Array.from(tools.entries()).map(([name, tool]: [string, any]) => ({
-              name,
-              description: tool.description,
-              hasInputSchema: !!tool.inputSchema,
-              hasOutputSchema: !!tool.outputSchema,
-              annotations: tool.annotations,
-              inputSchemaProperties: tool.inputSchema?.properties ? Object.keys(tool.inputSchema.properties) : [],
-              requiredParams: tool.inputSchema?.required || [],
-            }));
+            registryInfo.tools.details = Array.from(tools.entries()).map((entry: any) => {
+              const [name, tool] = entry as [string, any];
+              return {
+                name,
+                description: tool.description,
+                hasInputSchema: !!tool.inputSchema,
+                hasOutputSchema: !!tool.outputSchema,
+                annotations: tool.annotations,
+                inputSchemaProperties: tool.inputSchema?.properties ? Object.keys(tool.inputSchema.properties) : [],
+                requiredParams: tool.inputSchema?.required || [],
+              };
+            });
           }
         }
 
@@ -71,14 +74,17 @@ export function registerGetRegistryDetails(server: McpServer) {
           };
           
           if (params.includeDetails) {
-            registryInfo.resources.details = Array.from(resources.entries()).map(([uri, resource]: [string, any]) => ({
-              uri,
-              name: resource.name,
-              description: resource.description,
-              mimeType: resource.mimeType,
-              size: resource.size,
-              annotations: resource.annotations,
-            }));
+            registryInfo.resources.details = Array.from(resources.entries()).map((entry: any) => {
+              const [uri, resource] = entry as [string, any];
+              return {
+                uri,
+                name: resource.name,
+                description: resource.description,
+                mimeType: resource.mimeType,
+                size: resource.size,
+                annotations: resource.annotations,
+              };
+            });
           }
         }
 
@@ -91,13 +97,16 @@ export function registerGetRegistryDetails(server: McpServer) {
           };
           
           if (params.includeDetails) {
-            registryInfo.resourceTemplates.details = Array.from(resourceTemplates.entries()).map(([template, resource]: [string, any]) => ({
-              uriTemplate: template,
-              name: resource.name,
-              description: resource.description,
-              mimeType: resource.mimeType,
-              annotations: resource.annotations,
-            }));
+            registryInfo.resourceTemplates.details = Array.from(resourceTemplates.entries()).map((entry: any) => {
+              const [template, resource] = entry as [string, any];
+              return {
+                uriTemplate: template,
+                name: resource.name,
+                description: resource.description,
+                mimeType: resource.mimeType,
+                annotations: resource.annotations,
+              };
+            });
           }
         }
 
@@ -110,17 +119,20 @@ export function registerGetRegistryDetails(server: McpServer) {
           };
           
           if (params.includeDetails) {
-            registryInfo.prompts.details = Array.from(prompts.entries()).map(([name, prompt]: [string, any]) => ({
-              name,
-              description: prompt.description,
-              hasArguments: !!prompt.arguments && prompt.arguments.length > 0,
-              argumentCount: prompt.arguments?.length || 0,
-              arguments: prompt.arguments?.map((arg: any) => ({
-                name: arg.name,
-                description: arg.description,
-                required: arg.required,
-              })) || [],
-            }));
+            registryInfo.prompts.details = Array.from(prompts.entries()).map((entry: any) => {
+              const [name, prompt] = entry as [string, any];
+              return {
+                name,
+                description: prompt.description,
+                hasArguments: !!prompt.arguments && prompt.arguments.length > 0,
+                argumentCount: prompt.arguments?.length || 0,
+                arguments: prompt.arguments?.map((arg: any) => ({
+                  name: arg.name,
+                  description: arg.description,
+                  required: arg.required,
+                })) || [],
+              };
+            });
           }
         }
 

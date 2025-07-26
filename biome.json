@@ -28,7 +28,7 @@
       },
       "style": {
         "useConst": "error",
-        "useTemplate": "error"
+        "useTemplate": "off"
       },
       "suspicious": {
         "noExplicitAny": "warn",

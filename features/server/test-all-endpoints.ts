@@ -1,5 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
+interface TestCase {
+  method: string;
+  description: string;
+  params?: any;
+}
+
 /**
  * Comprehensive endpoint testing tool
  * Tests all implemented MCP spec endpoints
@@ -42,7 +48,7 @@ export function registerTestAllEndpoints(server: McpServer) {
         results.push("");
         
         // Define test scenarios for each endpoint category
-        const testCategories = {
+        const testCategories: Record<string, TestCase[]> = {
           resources: [
             { method: "resources/list", description: "List all resources" },
             { method: "resources/read", description: "Read resource content", params: { uri: "test://example" } },
@@ -104,7 +110,7 @@ export function registerTestAllEndpoints(server: McpServer) {
           
           const tests = testCategories[cat as keyof typeof testCategories];
           
-          for (const test of tests) {
+          for (const test of tests as TestCase[]) {
             totalTests++;
             
             try {

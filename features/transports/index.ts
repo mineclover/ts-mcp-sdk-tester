@@ -116,7 +116,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
   });
 
   // Health check endpoint
-  app.get("/health", (_req, res) => {
+  app.get("/health", (_req: Request, res: Response) => {
     res.json({
       status: "ok",
       transport: "streamable-http",
@@ -126,7 +126,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
   });
 
   // Server info endpoint
-  app.get("/info", (_req, res) => {
+  app.get("/info", (_req: Request, res: Response) => {
     res.json({
       name: "MCP SDK Tester",
       version: "1.0.0",
