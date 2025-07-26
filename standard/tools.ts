@@ -9,6 +9,7 @@ import type {
   Tool,
   ContentBlock
 } from "../spec/current_spec.js";
+import { logger } from "./logger.js";
 
 /**
  * Standard MCP Tools Endpoints
@@ -19,6 +20,7 @@ import type {
  */
 
 export function registerToolsEndpoints(server: McpServer) {
+  logger.logMethodEntry("registerToolsEndpoints", undefined, "tools");
   registerListTools(server);
   registerCallTool(server);
 }
@@ -28,9 +30,13 @@ export function registerToolsEndpoints(server: McpServer) {
  * Returns a paginated list of available tools
  */
 function registerListTools(server: McpServer) {
+  logger.logMethodEntry("registerListTools", undefined, "tools");
+  
   server.server.setRequestHandler(
     ListToolsRequestSchema,
-    async (request): Promise<ListToolsResult> => {
+    async (request, extra): Promise<ListToolsResult> => {
+      await logger.logEndpointEntry("tools/list", extra.requestId, request.params);
+      
       const { cursor } = request.params || {};
       
       // Sample tools for demonstration
@@ -186,6 +192,7 @@ function registerListTools(server: McpServer) {
         result.nextCursor = endIndex.toString();
       }
       
+      await logger.logMethodExit("tools/list", { toolCount: tools.length }, "tools");
       return result;
     }
   );
@@ -196,9 +203,16 @@ function registerListTools(server: McpServer) {
  * Calls a specific tool by name with provided arguments
  */
 function registerCallTool(server: McpServer) {
+  logger.logMethodEntry("registerCallTool", undefined, "tools");
+  
   server.server.setRequestHandler(
     CallToolRequestSchema,
-    async (request): Promise<CallToolResult> => {
+    async (request, extra): Promise<CallToolResult> => {
+      await logger.logEndpointEntry("tools/call", extra.requestId, {
+        name: request.params.name,
+        hasArgs: !!request.params.arguments
+      });
+      
       const { name, arguments: args } = request.params;
       
       try {
@@ -335,11 +349,16 @@ Writable: ${info.writable}`,
           result.structuredContent = structuredContent;
         }
         
+        await logger.logMethodExit("tools/call", { toolName: name, success: true }, "tools");
         return result;
         
       } catch (error) {
+        // Log server error for debugging
+        await logger.logServerError(error instanceof Error ? error : new Error(String(error)), 
+          "tools/call", { toolName: name, arguments: args });
+        
         // Return error as a tool result, not as a protocol error
-        return {
+        const errorResult = {
           content: [{
             type: 'text',
             text: `Tool execution failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -352,6 +371,9 @@ Writable: ${info.writable}`,
             error: error instanceof Error ? error.message : String(error),
           },
         };
+        
+        await logger.logMethodExit("tools/call", { toolName: name, success: false }, "tools");
+        return errorResult;
       }
     }
   );

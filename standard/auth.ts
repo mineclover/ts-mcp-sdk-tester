@@ -7,6 +7,7 @@ import type {
 } from "../spec/current_spec.js";
 import { LATEST_PROTOCOL_VERSION } from "../spec/current_spec.js";
 import { APP_CONFIG } from "./constants.js";
+import { logger } from "./logger.js";
 
 /**
  * Standard MCP Authentication & Initialization Endpoints
@@ -16,6 +17,7 @@ import { APP_CONFIG } from "./constants.js";
  */
 
 export function registerAuthEndpoints(server: McpServer) {
+  logger.logMethodEntry("registerAuthEndpoints", { serverName: APP_CONFIG.name }, "auth");
   registerInitialize(server);
 }
 
@@ -24,9 +26,16 @@ export function registerAuthEndpoints(server: McpServer) {
  * Handles client initialization requests and capability negotiation
  */
 function registerInitialize(server: McpServer) {
+  logger.logMethodEntry("registerInitialize", undefined, "auth");
+  
   server.server.setRequestHandler(
     InitializeRequestSchema,
-    async (request): Promise<InitializeResult> => {
+    async (request, extra): Promise<InitializeResult> => {
+      await logger.logEndpointEntry("initialize", extra.requestId, {
+        protocolVersion: request.params.protocolVersion,
+        clientInfo: request.params.clientInfo
+      });
+      
       const { protocolVersion, capabilities, clientInfo } = request.params;
       
       // Validate protocol version compatibility
@@ -126,6 +135,7 @@ All endpoints follow MCP specification standards with:
         },
       };
       
+      await logger.logMethodExit("initialize", { protocolVersion: negotiatedVersion }, "auth");
       return result;
     }
   );

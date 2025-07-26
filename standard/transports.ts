@@ -5,6 +5,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import cors from "cors";
 import express, { type Request, type Response } from "express";
 import { APP_CONFIG, TRANSPORT_CONFIG } from "./constants.js";
+import { logger } from "./logger.js";
 /**
  * Transport Management Features
  * Handles different MCP transport types and server setup
@@ -16,10 +17,14 @@ export interface TransportOptions {
 }
 
 export function setupTransport(server: McpServer, options: TransportOptions = {}) {
+  logger.logMethodEntry("setupTransport", options, "transport");
+  
   const { port, transport } = options;
 
   // Determine transport type based on arguments
   const transportType = transport || (port ? "streamable" : "stdio");
+  
+  logger.info(`Setting up ${transportType} transport`, "transport");
 
   switch (transportType) {
     case "stdio":
@@ -32,9 +37,17 @@ export function setupTransport(server: McpServer, options: TransportOptions = {}
 }
 
 function setupStdioTransport(server: McpServer) {
-  const transport = new StdioServerTransport();
-  server.connect(transport);
-  console.error("MCP Server running on stdio transport");
+  logger.logMethodEntry("setupStdioTransport", undefined, "transport");
+  
+  try {
+    const transport = new StdioServerTransport();
+    server.connect(transport);
+    logger.info("MCP Server running on stdio transport", "transport");
+  } catch (error) {
+    logger.logServerError(error instanceof Error ? error : new Error(String(error)), 
+      "setupStdioTransport");
+    throw error;
+  }
 }
 
 // Streamable HTTP transport
@@ -48,7 +61,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
 
   // Modern Streamable HTTP endpoint
   app.all("/mcp", async (req: Request, res: Response) => {
-    console.error(`Received ${req.method} request to /mcp (Streamable HTTP)`);
+    logger.debug(`Received ${req.method} request to /mcp (Streamable HTTP)`, "transport");
 
     try {
       // Check for existing session ID
@@ -63,7 +76,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (sessionId) => {
-            console.error(`Streamable HTTP session initialized: ${sessionId}`);
+            logger.info(`Streamable HTTP session initialized: ${sessionId}`, "transport");
             transports[sessionId] = transport;
           },
         });
@@ -72,7 +85,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
         transport.onclose = () => {
           const sid = transport.sessionId;
           if (sid && transports[sid]) {
-            console.error(`Transport closed for session ${sid}`);
+            logger.info(`Transport closed for session ${sid}`, "transport");
             delete transports[sid];
           }
         };
@@ -95,7 +108,12 @@ function setupStreamableTransport(server: McpServer, port: number) {
       // Handle the request with the transport
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
-      console.error("Error handling Streamable HTTP request:", error);
+      logger.logServerError(error instanceof Error ? error : new Error(String(error)), 
+        "HTTP request handling", { 
+          method: req.method, 
+          url: req.url,
+          sessionId: req.headers["mcp-session-id"]
+        });
       if (!res.headersSent) {
         res.status(500).json({
           jsonrpc: APP_CONFIG.jsonrpc,
@@ -202,15 +220,15 @@ function setupStreamableTransport(server: McpServer, port: number) {
   });
 
   const httpServer = app.listen(port, () => {
-    console.error(`MCP Server running on http://localhost:${port} (Streamable HTTP transport)`);
-    console.error(`Protocol: ${APP_CONFIG.protocol}`);
-    console.error(`Streamable HTTP endpoint: http://localhost:${port}/mcp`);
-    console.error(`Health check: http://localhost:${port}/health`);
+    logger.info(`MCP Server running on http://localhost:${port} (Streamable HTTP transport)`, "transport");
+    logger.info(`Protocol: ${APP_CONFIG.protocol}`, "transport");
+    logger.info(`Streamable HTTP endpoint: http://localhost:${port}/mcp`, "transport");
+    logger.info(`Health check: http://localhost:${port}/health`, "transport");
   });
 
   // Graceful shutdown
   process.on("SIGINT", () => {
-    console.error("Shutting down Streamable HTTP server...");
+    logger.info("Shutting down Streamable HTTP server...", "transport");
     httpServer.close(() => {
       process.exit(0);
     });

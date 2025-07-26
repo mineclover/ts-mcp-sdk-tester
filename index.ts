@@ -1,12 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerStandardEndpoints, parseArguments, setupTransport } from "./standard/index.js";
 import { APP_CONFIG } from "./standard/constants.js";
+import { logger } from "./standard/logger.js";
 
 /**
  * MCP SDK Tester - A comprehensive testing server for MCP SDK features
  *
  * This server exposes all MCP SDK features as tools for testing via MCP.
- * Supports stdio, http+sse, and streamable HTTP transports.
+ * Supports stdio, and streamable HTTP transports.
  */
 
 function createServer() {
@@ -54,10 +55,13 @@ async function main() {
 
 // Handle server shutdown
 process.on("SIGINT", async () => {
-  console.log("Shutting down server...");
+  logger.info("Shutting down server...", "main");
   process.exit(0);
 });
 
 if (import.meta.main) {
-  main().catch(console.error);
+  main().catch((error) => {
+    logger.error(`Main process error: ${error}`, "main");
+    console.error(error); // Keep console.error for critical startup errors
+  });
 }
