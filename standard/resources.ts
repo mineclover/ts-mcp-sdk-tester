@@ -16,6 +16,7 @@ import type {
   ResourceTemplate,
   TextResourceContents,
 } from "../spec/current_spec.js";
+import { DEMO_RESOURCES, getDemoResourceContent } from "../demo/index.js";
 
 /**
  * Standard MCP Resources Endpoints
@@ -46,33 +47,8 @@ function registerListResources(server: McpServer) {
     async (request): Promise<ListResourcesResult> => {
       const { cursor } = request.params || {};
 
-      // Sample resources for demonstration
-      const allResources: Resource[] = [
-        {
-          name: "test-resource-1",
-          title: "Test Resource 1",
-          uri: "test://resource1",
-          description: "A sample test resource for demonstration",
-          mimeType: "text/plain",
-          size: 100,
-        },
-        {
-          name: "test-resource-2",
-          title: "Test Resource 2",
-          uri: "test://resource2",
-          description: "Another sample test resource",
-          mimeType: "application/json",
-          size: 200,
-        },
-        {
-          name: "sample-file",
-          title: "Sample File Resource",
-          uri: "file:///sample.txt",
-          description: "Sample file resource",
-          mimeType: "text/plain",
-          size: 150,
-        },
-      ];
+      // Demo resources from separated demo data
+      const allResources: Resource[] = DEMO_RESOURCES;
 
       // Simple pagination implementation
       const pageSize = 10;
@@ -180,73 +156,29 @@ function registerReadResource(server: McpServer) {
     async (request): Promise<ReadResourceResult> => {
       const { uri } = request.params;
 
-      // Sample resource data based on URI
+      // Get demo resource content from separated demo data
       let contents: (TextResourceContents | BlobResourceContents)[];
 
-      if (uri === "test://resource1") {
-        contents = [
-          {
-            uri,
-            text: "This is the content of test resource 1.\nIt contains sample text data.",
-            mimeType: "text/plain",
-            _meta: {
-              readTime: new Date().toISOString(),
-              size: 54,
-            },
-          },
-        ];
-      } else if (uri === "test://resource2") {
-        contents = [
-          {
-            uri,
-            text: JSON.stringify(
-              {
-                message: "This is test resource 2",
-                data: {
-                  value: 42,
-                  active: true,
-                  timestamp: new Date().toISOString(),
-                },
+      try {
+        contents = getDemoResourceContent(uri);
+      } catch (error) {
+        // Handle additional demo resource types not in main demo data
+        if (uri.startsWith("api:///")) {
+          // Sample API resource
+          contents = [
+            {
+              uri,
+              blob: Buffer.from("Sample binary data from API").toString("base64"),
+              mimeType: "application/octet-stream",
+              _meta: {
+                readTime: new Date().toISOString(),
+                apiEndpoint: uri,
               },
-              null,
-              2
-            ),
-            mimeType: "application/json",
-            _meta: {
-              readTime: new Date().toISOString(),
-              size: 120,
             },
-          },
-        ];
-      } else if (uri.startsWith("file:///")) {
-        // Sample file resource
-        const filename = uri.split("/").pop() || "unknown";
-        contents = [
-          {
-            uri,
-            text: `Content of file: ${filename}\nThis is simulated file content.`,
-            mimeType: "text/plain",
-            _meta: {
-              readTime: new Date().toISOString(),
-              filename,
-            },
-          },
-        ];
-      } else if (uri.startsWith("api:///")) {
-        // Sample API resource
-        contents = [
-          {
-            uri,
-            blob: Buffer.from("Sample binary data from API").toString("base64"),
-            mimeType: "application/octet-stream",
-            _meta: {
-              readTime: new Date().toISOString(),
-              apiEndpoint: uri,
-            },
-          },
-        ];
-      } else {
-        throw new Error(`Resource not found: ${uri}`);
+          ];
+        } else {
+          throw new Error(`Resource not found: ${uri}`);
+        }
       }
 
       const result: ReadResourceResult = {

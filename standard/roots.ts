@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ListRootsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { ListRootsResult, Root } from "../spec/current_spec.js";
+import { DEMO_ROOTS } from "../demo/index.js";
 
 /**
  * Standard MCP Roots Endpoints
@@ -23,54 +24,15 @@ function registerListRoots(server: McpServer) {
     // the server would send this request to the client to get available roots.
     // For testing purposes, we'll simulate a response.
 
-    // Simulate typical development environment roots
-    const simulatedRoots: Root[] = [
-      {
-        uri: "file:///Users/developer/projects",
-        name: "Projects Directory",
-        _meta: {
-          description: "Main projects directory",
-          simulatedRoot: true,
-          type: "directory",
-        },
+    // Get demo roots from separated demo data
+    const simulatedRoots: Root[] = DEMO_ROOTS.map(root => ({
+      ...root,
+      _meta: {
+        ...root._meta,
+        simulatedRoot: true,
+        requestedAt: new Date().toISOString(),
       },
-      {
-        uri: "file:///Users/developer/documents",
-        name: "Documents",
-        _meta: {
-          description: "User documents directory",
-          simulatedRoot: true,
-          type: "directory",
-        },
-      },
-      {
-        uri: "file:///tmp",
-        name: "Temporary Files",
-        _meta: {
-          description: "System temporary directory",
-          simulatedRoot: true,
-          type: "directory",
-        },
-      },
-      {
-        uri: "file:///var/log",
-        name: "System Logs",
-        _meta: {
-          description: "System log files directory",
-          simulatedRoot: true,
-          type: "directory",
-        },
-      },
-      {
-        uri: "file:///etc/config",
-        name: "Configuration Files",
-        _meta: {
-          description: "System configuration directory",
-          simulatedRoot: true,
-          type: "directory",
-        },
-      },
-    ];
+    }));
 
     const result: ListRootsResult = {
       roots: simulatedRoots,
