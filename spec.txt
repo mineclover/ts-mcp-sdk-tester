@@ -1,0 +1,1 @@
+https://github.com/modelcontextprotocol/typescript-sdk/blob/main/src/server/mcp.ts 가 가진 모든 기능을 그대로 tools로 노출해서 mcp를 통해 기능을 테스트하는 mcp
