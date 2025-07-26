@@ -53,7 +53,7 @@ function registerListResources(server: McpServer) {
   server.server.setRequestHandler(
     ListResourcesRequestSchema,
     async (request, extra): Promise<ListResourcesResult> => {
-      await logger.logEndpointEntry("resources/list", extra.requestId, {
+      const traceId = await logger.logEndpointEntry("resources/list", extra.requestId, {
         cursor: request.params?.cursor ? "[present]" : "[none]",
       });
 
@@ -86,7 +86,7 @@ function registerListResources(server: McpServer) {
           resourceCount: result.resources.length,
           totalCount: result._meta?.totalCount,
           hasMore: result._meta?.hasMore,
-        }, "resources");
+        }, "resources", traceId);
 
         return result;
       } catch (error) {
@@ -163,7 +163,7 @@ function registerReadResource(server: McpServer) {
     async (request, extra): Promise<ReadResourceResult> => {
       const { uri } = request.params;
       
-      await logger.logEndpointEntry("resources/read", extra.requestId, {
+      const traceId = await logger.logEndpointEntry("resources/read", extra.requestId, {
         uri: uri,
         uriScheme: uri.split('://')[0] || 'unknown',
       });
@@ -218,7 +218,7 @@ function registerReadResource(server: McpServer) {
           totalSize: contents.reduce((size, content) => 
             size + ('text' in content ? content.text.length : content.blob.length), 0
           ),
-        }, "resources");
+        }, "resources", traceId);
 
         return result;
       } catch (error) {
@@ -243,7 +243,7 @@ function registerSubscribeResource(server: McpServer) {
   server.server.setRequestHandler(SubscribeRequestSchema, async (request, extra): Promise<EmptyResult> => {
     const { uri } = request.params;
     
-    await logger.logEndpointEntry("resources/subscribe", extra.requestId, { uri });
+    const traceId = await logger.logEndpointEntry("resources/subscribe", extra.requestId, { uri });
 
     try {
       logger.info(`Client subscribing to resource: ${uri}`, "resources");
@@ -263,7 +263,7 @@ function registerSubscribeResource(server: McpServer) {
         requestId: extra.requestId,
         uri: uri,
         status: "subscribed",
-      }, "resources");
+      }, "resources", traceId);
 
       return result;
     } catch (error) {
@@ -289,7 +289,7 @@ function registerUnsubscribeResource(server: McpServer) {
     async (request, extra): Promise<EmptyResult> => {
       const { uri } = request.params;
       
-      await logger.logEndpointEntry("resources/unsubscribe", extra.requestId, { uri });
+      const traceId = await logger.logEndpointEntry("resources/unsubscribe", extra.requestId, { uri });
 
       try {
         logger.info(`Client unsubscribing from resource: ${uri}`, "resources");
@@ -309,7 +309,7 @@ function registerUnsubscribeResource(server: McpServer) {
           requestId: extra.requestId,
           uri: uri,
           status: "unsubscribed",
-        }, "resources");
+        }, "resources", traceId);
 
         return result;
       } catch (error) {

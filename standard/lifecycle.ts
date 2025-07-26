@@ -30,27 +30,49 @@ class LifecycleManager {
    * Initialize lifecycle manager with MCP server
    */
   initialize(server: McpServer) {
+    const traceId = logger.startOperation("lifecycle.initialize", {
+      'lifecycle.server.type': 'McpServer',
+      'lifecycle.state.initial': this.state,
+    });
+    
     logger.logMethodEntry("lifecycle.initialize", { 
       serverType: 'McpServer' 
     }, "lifecycle");
     
-    this.server = server;
-    this.state = LifecycleState.INITIALIZING;
-    
-    logger.debug("Registering lifecycle endpoints", "lifecycle");
-    this.registerLifecycleEndpoints(server);
-    
-    logger.debug("Setting up shutdown handlers", "lifecycle");
-    this.setupShutdownHandlers();
-    
-    logger.info({
-      message: "Lifecycle manager initialized",
-      state: this.state,
-      startTime: this.startTime.toISOString(),
-      serverType: 'McpServer',
-    }, "lifecycle");
-    
-    logger.logMethodExit("lifecycle.initialize", { state: this.state }, "lifecycle");
+    try {
+      this.server = server;
+      this.state = LifecycleState.INITIALIZING;
+      
+      logger.debug("Registering lifecycle endpoints", "lifecycle");
+      this.registerLifecycleEndpoints(server);
+      
+      logger.debug("Setting up shutdown handlers", "lifecycle");
+      this.setupShutdownHandlers();
+      
+      logger.info({
+        message: "Lifecycle manager initialized",
+        state: this.state,
+        startTime: this.startTime.toISOString(),
+        serverType: 'McpServer',
+      }, "lifecycle");
+      
+      logger.logMethodExit("lifecycle.initialize", { state: this.state }, "lifecycle", traceId);
+      
+      if (traceId) {
+        logger.endOperation(traceId, {
+          'lifecycle.state.final': this.state,
+          'lifecycle.initialization.success': true,
+        });
+      }
+    } catch (error) {
+      if (traceId) {
+        logger.endOperation(traceId, {
+          'lifecycle.initialization.success': false,
+          'lifecycle.error.type': error instanceof Error ? error.name : 'unknown',
+        });
+      }
+      throw error;
+    }
   }
 
   /**
@@ -92,6 +114,12 @@ class LifecycleManager {
     if (this.state === LifecycleState.SHUTTING_DOWN || this.state === LifecycleState.SHUTDOWN) {
       return;
     }
+
+    const traceId = logger.startOperation("lifecycle.shutdown", {
+      'lifecycle.shutdown.reason': reason,
+      'lifecycle.state.previous': this.state,
+      'lifecycle.uptime.ms': this.getUptime() * 1000,
+    });
 
     const previousState = this.state;
     this.state = LifecycleState.SHUTTING_DOWN;
@@ -138,11 +166,26 @@ class LifecycleManager {
         handlersExecuted: this.shutdownHandlers.length,
       }, "lifecycle");
       
+      if (traceId) {
+        logger.endOperation(traceId, {
+          'lifecycle.shutdown.success': true,
+          'lifecycle.handlers.executed': this.shutdownHandlers.length,
+          'lifecycle.final.uptime.ms': this.getUptime() * 1000,
+        });
+      }
+      
     } catch (error) {
       logger.error({
         message: "Error during shutdown",
         error: error instanceof Error ? error.message : String(error),
       }, "lifecycle");
+      
+      if (traceId) {
+        logger.endOperation(traceId, {
+          'lifecycle.shutdown.success': false,
+          'lifecycle.error.type': error instanceof Error ? error.name : 'unknown',
+        });
+      }
       
       this.state = LifecycleState.SHUTDOWN;
     }

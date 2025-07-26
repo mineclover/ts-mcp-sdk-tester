@@ -29,7 +29,9 @@ function registerListTools(server: McpServer) {
   server.server.setRequestHandler(
     ListToolsRequestSchema,
     async (request, extra): Promise<ListToolsResult> => {
-      await logger.logEndpointEntry("tools/list", extra.requestId, request.params);
+      const traceId = await logger.logEndpointEntry("tools/list", extra.requestId, {
+        cursor: request.params?.cursor ? "[present]" : "[none]",
+      });
 
       const { cursor } = request.params || {};
 
@@ -46,14 +48,19 @@ function registerListTools(server: McpServer) {
         tools: paginationResult.items,
         nextCursor: paginationResult.nextCursor,
         _meta: {
-          totalCount: paginationResult._meta.totalCount,
-          pageSize: paginationResult._meta.pageSize,
-          startIndex: paginationResult._meta.startIndex,
-          hasMore: paginationResult._meta.hasMore,
+          totalCount: paginationResult._meta?.totalCount,
+          pageSize: paginationResult._meta?.pageSize,
+          startIndex: paginationResult._meta?.startIndex,
+          hasMore: paginationResult._meta?.hasMore,
         },
       };
 
-      await logger.logMethodExit("tools/list", { toolCount: paginationResult.items.length }, "tools");
+      await logger.logMethodExit("tools/list", {
+        requestId: extra.requestId,
+        toolCount: paginationResult.items.length,
+        totalCount: result._meta?.totalCount,
+        hasMore: result._meta?.hasMore,
+      }, "tools", traceId);
       return result;
     }
   );
@@ -69,25 +76,53 @@ function registerCallTool(server: McpServer) {
   server.server.setRequestHandler(
     CallToolRequestSchema,
     async (request, extra): Promise<CallToolResult> => {
-      await logger.logEndpointEntry("tools/call", extra.requestId, {
-        name: request.params.name,
-        hasArgs: !!request.params.arguments,
+      const traceId = await logger.logEndpointEntry("tools/call", extra.requestId, {
+        toolName: request.params.name,
+        hasArguments: !!request.params.arguments,
+        argumentCount: request.params.arguments ? Object.keys(request.params.arguments).length : 0,
       });
 
       const { name, arguments: args } = request.params;
 
       try {
+        const startTime = Date.now();
+        
+        // Start nested operation for tool execution  
+        const toolTraceId = logger.startOperation(`tool.${name}`, {
+          'tool.name': name,
+          'tool.args.count': args ? Object.keys(args).length : 0,
+          'tool.execution.start': startTime,
+        });
+        
         // Execute demo tool from separated demo data
         const result = executeDemoTool(name, args || {});
+        const executionTime = Date.now() - startTime;
+        
+        // End tool execution trace
+        if (toolTraceId) {
+          logger.endOperation(toolTraceId, {
+            'tool.execution.success': !result.isError,
+            'tool.execution.time.ms': executionTime,
+            'tool.result.content.count': result.content?.length || 0,
+          });
+        }
 
-        await logger.logMethodExit("tools/call", { toolName: name, success: !result.isError }, "tools");
+        await logger.logMethodExit("tools/call", {
+          requestId: extra.requestId,
+          toolName: name,
+          success: !result.isError,
+          executionTime,
+          contentCount: result.content?.length || 0,
+        }, "tools", traceId);
 
         return {
           ...result,
           _meta: {
             toolName: name,
             executedAt: new Date().toISOString(),
+            executionTime,
             arguments: args,
+            requestId: extra.requestId,
           },
         };
       } catch (error) {
@@ -115,7 +150,11 @@ function registerCallTool(server: McpServer) {
           },
         };
 
-        await logger.logMethodExit("tools/call", { toolName: name, success: false }, "tools");
+        await logger.logMethodExit("tools/call", {
+          requestId: extra.requestId,
+          toolName: name,
+          success: false,
+        }, "tools", traceId);
         return errorResult;
       }
     }

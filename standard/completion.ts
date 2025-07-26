@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CompleteRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { CompleteResult } from "../spec/current_spec.js";
 import { getDemoPromptCompletions, getDemoResourceCompletions } from "../demo/index.js";
+import { logger } from "./logger.js";
 
 /**
  * Standard MCP Completion Endpoints
@@ -11,7 +12,9 @@ import { getDemoPromptCompletions, getDemoResourceCompletions } from "../demo/in
  */
 
 export function registerCompletionEndpoints(server: McpServer) {
+  logger.logMethodEntry("registerCompletionEndpoints", { serverType: 'McpServer' }, "completion");
   registerComplete(server);
+  logger.info("Completion endpoints registered successfully", "completion");
 }
 
 /**
@@ -19,10 +22,19 @@ export function registerCompletionEndpoints(server: McpServer) {
  * Provide completion suggestions for prompt or resource template arguments
  */
 function registerComplete(server: McpServer) {
+  logger.logMethodEntry("registerComplete", undefined, "completion");
+  
   server.server.setRequestHandler(
     CompleteRequestSchema,
-    async (request): Promise<CompleteResult> => {
+    async (request, extra): Promise<CompleteResult> => {
       const { ref, argument, context } = request.params;
+      
+      const traceId = await logger.logEndpointEntry("completion/complete", extra.requestId, {
+        refType: ref.type,
+        refName: ref.name,
+        argument: argument.name,
+        hasContext: !!context,
+      });
 
       // Generate completion suggestions from separated demo data
       let completionValues: string[] = [];
@@ -50,8 +62,17 @@ function registerComplete(server: McpServer) {
           referenceType: ref.type,
           context: context,
           generatedAt: new Date().toISOString(),
+          requestId: extra.requestId,
         },
       };
+
+      await logger.logMethodExit("completion/complete", {
+        requestId: extra.requestId,
+        refType: ref.type,
+        completionCount: limitedValues.length,
+        totalCount: completionValues.length,
+        hasMore: completionValues.length > 100,
+      }, "completion", traceId);
 
       return result;
     }
