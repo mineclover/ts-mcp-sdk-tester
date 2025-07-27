@@ -55,50 +55,108 @@ export class SessionManager {
     userId?: string,
     capabilities: string[] = []
   ): string {
-    const timestamp = Date.now();
-    const sessionId = `mcp_session_${userId || clientType}_${timestamp}`;
-    
-    const sessionInfo: SessionInfo = {
-      sessionId,
-      clientType,
-      userId,
-      capabilities,
-      createdAt: timestamp,
-      lastActiveAt: timestamp,
-    };
-
-    this.sessions.set(sessionId, sessionInfo);
-    this.notifyEvent({ type: "created", sessionId, clientType });
-    
-    logger.info(`Session created: ${sessionId}`, "session", {
-      clientType,
-      userId,
-      capabilities,
+    const traceId = logger.startOperation("session.create", {
+      "session.client_type": clientType,
+      "session.user_id": userId || "anonymous",
+      "session.capabilities.count": capabilities.length,
+      "session.capabilities": capabilities.join(","),
     });
 
-    return sessionId;
+    try {
+      const timestamp = Date.now();
+      const sessionId = `mcp_session_${userId || clientType}_${timestamp}`;
+      
+      const sessionInfo: SessionInfo = {
+        sessionId,
+        clientType,
+        userId,
+        capabilities,
+        createdAt: timestamp,
+        lastActiveAt: timestamp,
+      };
+
+      this.sessions.set(sessionId, sessionInfo);
+      this.notifyEvent({ type: "created", sessionId, clientType });
+      
+      logger.info(`Session created: ${sessionId}`, "session", {
+        clientType,
+        userId,
+        capabilities,
+      });
+
+      if (traceId) {
+        logger.endOperation(traceId, {
+          "session.id": sessionId,
+          "session.created_at": timestamp,
+          "session.success": true,
+        });
+      }
+
+      return sessionId;
+    } catch (error) {
+      if (traceId) {
+        logger.endOperation(traceId, {
+          "session.success": false,
+          "session.error": error instanceof Error ? error.message : String(error),
+        });
+      }
+      throw error;
+    }
   }
 
   /**
    * 세션 활성화
    */
   activateSession(sessionId: string): boolean {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      logger.warning(`Attempted to activate non-existent session: ${sessionId}`, "session");
-      return false;
-    }
+    const traceId = logger.startOperation("session.activate", {
+      "session.id": sessionId,
+      "session.previous_active": this.activeSessionId || "none",
+    });
 
-    this.activeSessionId = sessionId;
-    session.lastActiveAt = Date.now();
-    
-    // logger에 세션 컨텍스트 설정
-    logger.setSessionContext(sessionId);
-    
-    this.notifyEvent({ type: "activated", sessionId });
-    logger.debug(`Session activated: ${sessionId}`, "session");
-    
-    return true;
+    try {
+      const session = this.sessions.get(sessionId);
+      if (!session) {
+        logger.warning(`Attempted to activate non-existent session: ${sessionId}`, "session");
+        
+        if (traceId) {
+          logger.endOperation(traceId, {
+            "session.success": false,
+            "session.error": "session_not_found",
+          });
+        }
+        return false;
+      }
+
+      const previousActiveId = this.activeSessionId;
+      this.activeSessionId = sessionId;
+      session.lastActiveAt = Date.now();
+      
+      // logger에 세션 컨텍스트 설정
+      logger.setSessionContext(sessionId);
+      
+      this.notifyEvent({ type: "activated", sessionId });
+      logger.debug(`Session activated: ${sessionId}`, "session");
+      
+      if (traceId) {
+        logger.endOperation(traceId, {
+          "session.success": true,
+          "session.client_type": session.clientType,
+          "session.user_id": session.userId || "anonymous",
+          "session.last_active_at": session.lastActiveAt,
+          "session.previous_active_id": previousActiveId || "none",
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      if (traceId) {
+        logger.endOperation(traceId, {
+          "session.success": false,
+          "session.error": error instanceof Error ? error.message : String(error),
+        });
+      }
+      throw error;
+    }
   }
 
   /**
@@ -122,41 +180,108 @@ export class SessionManager {
    * 세션 정보 업데이트
    */
   updateSession(sessionId: string, updates: Partial<SessionInfo>): boolean {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      logger.warning(`Attempted to update non-existent session: ${sessionId}`, "session");
-      return false;
-    }
-
-    Object.assign(session, updates, {
-      lastActiveAt: Date.now(),
+    const traceId = logger.startOperation("session.update", {
+      "session.id": sessionId,
+      "session.update_fields": Object.keys(updates).join(","),
     });
 
-    this.notifyEvent({ type: "updated", sessionId, changes: updates });
-    logger.debug(`Session updated: ${sessionId}`, "session", updates);
-    
-    return true;
+    try {
+      const session = this.sessions.get(sessionId);
+      if (!session) {
+        logger.warning(`Attempted to update non-existent session: ${sessionId}`, "session");
+        
+        if (traceId) {
+          logger.endOperation(traceId, {
+            "session.success": false,
+            "session.error": "session_not_found",
+          });
+        }
+        return false;
+      }
+
+      const previousState = { ...session };
+      Object.assign(session, updates, {
+        lastActiveAt: Date.now(),
+      });
+
+      this.notifyEvent({ type: "updated", sessionId, changes: updates });
+      logger.debug(`Session updated: ${sessionId}`, "session", updates);
+      
+      if (traceId) {
+        logger.endOperation(traceId, {
+          "session.success": true,
+          "session.updates": JSON.stringify(updates),
+          "session.last_active_at": session.lastActiveAt,
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      if (traceId) {
+        logger.endOperation(traceId, {
+          "session.success": false,
+          "session.error": error instanceof Error ? error.message : String(error),
+        });
+      }
+      throw error;
+    }
   }
 
   /**
    * 세션 종료
    */
   terminateSession(sessionId: string, reason?: string): boolean {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      return false;
-    }
+    const traceId = logger.startOperation("session.terminate", {
+      "session.id": sessionId,
+      "session.termination_reason": reason || "unspecified",
+      "session.was_active": this.activeSessionId === sessionId,
+    });
 
-    this.sessions.delete(sessionId);
-    
-    if (this.activeSessionId === sessionId) {
-      this.activeSessionId = undefined;
-    }
+    try {
+      const session = this.sessions.get(sessionId);
+      if (!session) {
+        if (traceId) {
+          logger.endOperation(traceId, {
+            "session.success": false,
+            "session.error": "session_not_found",
+          });
+        }
+        return false;
+      }
 
-    this.notifyEvent({ type: "terminated", sessionId, reason });
-    logger.info(`Session terminated: ${sessionId}`, "session", { reason });
-    
-    return true;
+      const sessionLifetime = Date.now() - session.createdAt;
+      const wasActive = this.activeSessionId === sessionId;
+
+      this.sessions.delete(sessionId);
+      
+      if (this.activeSessionId === sessionId) {
+        this.activeSessionId = undefined;
+      }
+
+      this.notifyEvent({ type: "terminated", sessionId, reason });
+      logger.info(`Session terminated: ${sessionId}`, "session", { reason });
+      
+      if (traceId) {
+        logger.endOperation(traceId, {
+          "session.success": true,
+          "session.lifetime_ms": sessionLifetime,
+          "session.client_type": session.clientType,
+          "session.user_id": session.userId || "anonymous",
+          "session.was_active": wasActive,
+          "session.remaining_sessions": this.sessions.size,
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      if (traceId) {
+        logger.endOperation(traceId, {
+          "session.success": false,
+          "session.error": error instanceof Error ? error.message : String(error),
+        });
+      }
+      throw error;
+    }
   }
 
   /**
@@ -223,21 +348,47 @@ export class SessionManager {
    * 오래된 세션 정리 (메모리 효율성)
    */
   cleanupInactiveSessions(maxInactiveMs: number = 3600000): number {
-    const now = Date.now();
-    let cleanedCount = 0;
+    const traceId = logger.startOperation("session.cleanup", {
+      "session.cleanup.max_inactive_ms": maxInactiveMs,
+      "session.cleanup.total_sessions": this.sessions.size,
+    });
 
-    for (const [sessionId, session] of this.sessions.entries()) {
-      if (now - session.lastActiveAt > maxInactiveMs) {
-        this.terminateSession(sessionId, "inactive");
-        cleanedCount++;
+    try {
+      const now = Date.now();
+      let cleanedCount = 0;
+      const inactiveSessions: string[] = [];
+
+      for (const [sessionId, session] of this.sessions.entries()) {
+        if (now - session.lastActiveAt > maxInactiveMs) {
+          inactiveSessions.push(sessionId);
+          this.terminateSession(sessionId, "inactive");
+          cleanedCount++;
+        }
       }
-    }
 
-    if (cleanedCount > 0) {
-      logger.info(`Cleaned up ${cleanedCount} inactive sessions`, "session");
-    }
+      if (cleanedCount > 0) {
+        logger.info(`Cleaned up ${cleanedCount} inactive sessions`, "session");
+      }
 
-    return cleanedCount;
+      if (traceId) {
+        logger.endOperation(traceId, {
+          "session.cleanup.success": true,
+          "session.cleanup.cleaned_count": cleanedCount,
+          "session.cleanup.remaining_sessions": this.sessions.size,
+          "session.cleanup.inactive_sessions": inactiveSessions.join(","),
+        });
+      }
+
+      return cleanedCount;
+    } catch (error) {
+      if (traceId) {
+        logger.endOperation(traceId, {
+          "session.cleanup.success": false,
+          "session.cleanup.error": error instanceof Error ? error.message : String(error),
+        });
+      }
+      throw error;
+    }
   }
 
   /**
@@ -299,11 +450,35 @@ export async function withSession<T>(
   sessionId: string,
   task: () => Promise<T>
 ): Promise<T> {
+  const traceId = logger.startOperation("session.with_session", {
+    "session.target_id": sessionId,
+    "session.current_active_id": globalSessionManager.getActiveSession()?.sessionId || "none",
+  });
+
   const previousSessionId = globalSessionManager.getActiveSession()?.sessionId;
   
   try {
     globalSessionManager.activateSession(sessionId);
-    return await task();
+    const result = await task();
+    
+    if (traceId) {
+      logger.endOperation(traceId, {
+        "session.success": true,
+        "session.task_completed": true,
+        "session.restored_to": previousSessionId || "none",
+      });
+    }
+    
+    return result;
+  } catch (error) {
+    if (traceId) {
+      logger.endOperation(traceId, {
+        "session.success": false,
+        "session.task_error": error instanceof Error ? error.message : String(error),
+        "session.restored_to": previousSessionId || "none",
+      });
+    }
+    throw error;
   } finally {
     // 이전 세션으로 복원
     if (previousSessionId && previousSessionId !== sessionId) {
