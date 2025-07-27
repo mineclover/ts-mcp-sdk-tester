@@ -64,10 +64,13 @@ https://modelcontextprotocol.io/specification/2025-06-18/server/utilities/pagina
 	- /standard/ping.ts
 
 ## Phase 2: Basic Protocol Implementation (우선순위: 높음) 
-4. **lifecycle** - 서버 초기화 및 생명주기 관리 검토 
+4. **lifecycle** - 서버 초기화 및 생명주기 관리 검토
 	- /standard/lifecycle.ts
-	- Updated /standard/auth.ts, /standard/index.ts, /index.ts for complete lifecycle integration
-	- 사유: lifecycle 관리는 별도 모듈로 분리하고, 기존 auth와 main 파일들을 연동하여 완전한 생명주기 제어 구현
+	- /demo/lifecycle.ts
+	- /tests/lifecycle.test.ts
+	- /demo/session-lifecycle.ts
+	- /tests/session-lifecycle.test.ts
+	- 사유: MCP 라이프사이클 스펙에 맞게 초기화, 운영, 종료 단계를 완전히 구현하고, 세션 격리를 지원하는 SessionLifecycleManager와 SessionLifecycleManagerFactory를 추가하여 다중 사용자 환경에서 독립적인 라이프사이클 관리 구현 완료
 5. **transports** - 통신 프로토콜 (stdio, HTTP) 구현 검토 
 	- /standard/transports.ts
 	- 사유: lifecycle 관리와 연동하여 graceful shutdown 구현, 보안 강화 (localhost binding, CORS 제한), 상태 모니터링 추가
