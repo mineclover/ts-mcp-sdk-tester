@@ -20,16 +20,22 @@ export enum LifecycleState {
   SHUTDOWN = "shutdown"
 }
 
-class LifecycleManager {
+export class LifecycleManager {
   private state: LifecycleState = LifecycleState.UNINITIALIZED;
   private server: McpServer | null = null;
   private startTime: Date = new Date();
   private shutdownHandlers: Array<() => Promise<void> | void> = [];
+  private signalHandlersRegistered = false;
 
   /**
    * Initialize lifecycle manager with MCP server
    */
   initialize(server: McpServer) {
+    // Prevent double initialization
+    if (this.state !== LifecycleState.UNINITIALIZED) {
+      logger.warning(`Lifecycle already initialized in state: ${this.state}`, "lifecycle");
+      return;
+    }
     const traceId = logger.startOperation("lifecycle.initialize", {
       'lifecycle.server.type': 'McpServer',
       'lifecycle.state.initial': this.state,
@@ -79,6 +85,13 @@ class LifecycleManager {
    * Get current lifecycle state
    */
   getState(): LifecycleState {
+    return this.state;
+  }
+
+  /**
+   * Get current lifecycle state (alias for getState)
+   */
+  get currentState(): LifecycleState {
     return this.state;
   }
 
@@ -195,10 +208,11 @@ class LifecycleManager {
    * Register lifecycle-related endpoints
    */
   private registerLifecycleEndpoints(server: McpServer) {
-    // Register initialized notification handler
-    server.server.setNotificationHandler(
-      InitializedNotificationSchema,
-      async (notification) => {
+    try {
+      // Register initialized notification handler
+      server.setNotificationHandler(
+        InitializedNotificationSchema,
+        async () => {
         if (this.state === LifecycleState.SHUTTING_DOWN || this.state === LifecycleState.SHUTDOWN) {
           logger.warning("Initialized notification received during shutdown - ignoring", "lifecycle");
           return;
@@ -222,12 +236,24 @@ class LifecycleManager {
         }
       }
     );
+    } catch (error) {
+      logger.warning({
+        message: "Failed to register lifecycle endpoints - MCP server may not support notification handlers",
+        error: error instanceof Error ? error.message : String(error),
+      }, "lifecycle");
+    }
   }
 
   /**
    * Setup system-level shutdown handlers
    */
   private setupShutdownHandlers() {
+    // Prevent duplicate signal handler registration
+    if (this.signalHandlersRegistered) {
+      logger.debug("Signal handlers already registered, skipping", "lifecycle");
+      return;
+    }
+    
     logger.logMethodEntry("lifecycle.setupShutdownHandlers", undefined, "lifecycle");
     
     // Handle various shutdown signals
@@ -281,6 +307,8 @@ class LifecycleManager {
     
     logger.debug("Registered unhandledRejection handler", "lifecycle");
     logger.info(`Registered ${shutdownSignals.length} signal handlers + 2 error handlers`, "lifecycle");
+    
+    this.signalHandlersRegistered = true;
   }
 
   /**

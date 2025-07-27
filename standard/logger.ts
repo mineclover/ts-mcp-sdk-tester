@@ -12,16 +12,8 @@ import { sessionLogger, type SessionAwareLogData } from "./otel-session.js";
 // Define log data type
 type LogData = string | number | boolean | object | null | undefined;
 
-// Sensitive data patterns to filter
-const SENSITIVE_PATTERNS = [
-  /password/i,
-  /secret/i,
-  /token/i,
-  /key/i,
-  /auth/i,
-  /credential/i,
-  /private/i,
-];
+// Sensitive data patterns to filter (optimized with compiled regex)
+const SENSITIVE_PATTERN = /password|secret|token|key|auth|credential|private/i;
 
 // Rate limiting for logging
 interface LogRateLimit {
@@ -367,11 +359,9 @@ export class Logger {
     }
     
     if (typeof data === 'string') {
-      // Check if the string itself might be sensitive
-      for (const pattern of SENSITIVE_PATTERNS) {
-        if (pattern.test(data)) {
-          return '[FILTERED_SENSITIVE_DATA]';
-        }
+      // Use optimized single regex pattern
+      if (SENSITIVE_PATTERN.test(data)) {
+        return '[FILTERED_SENSITIVE_DATA]';
       }
       return data;
     }
@@ -380,14 +370,14 @@ export class Logger {
       const filtered: Record<string, unknown> | unknown[] = Array.isArray(data) ? [] : {};
       
       for (const [key, value] of Object.entries(data)) {
-        // Check if key is sensitive
-        const isSensitiveKey = SENSITIVE_PATTERNS.some(pattern => pattern.test(key));
+        // Use optimized single regex pattern for key checking
+        const isSensitiveKey = SENSITIVE_PATTERN.test(key);
         
         if (isSensitiveKey) {
           (filtered as Record<string, unknown>)[key] = '[FILTERED]';
         } else if (typeof value === 'string') {
-          // Check if value might be sensitive
-          const isSensitiveValue = SENSITIVE_PATTERNS.some(pattern => pattern.test(value));
+          // Use optimized single regex pattern for value checking
+          const isSensitiveValue = SENSITIVE_PATTERN.test(value);
           (filtered as Record<string, unknown>)[key] = isSensitiveValue ? '[FILTERED]' : value;
         } else if (typeof value === 'object' && value !== null) {
           (filtered as Record<string, unknown>)[key] = this.filterSensitiveData(value);

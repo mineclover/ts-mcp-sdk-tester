@@ -430,10 +430,14 @@ export function sigNozHttpMiddleware() {
         };
 
         // Continue with request
-        await new Promise((resolve) => {
-          next();
-          res.on('finish', resolve);
-        });
+        next();
+        
+        // Only add finish listener if res.on exists (real response object)
+        if (typeof res.on === 'function') {
+          res.on('finish', () => {
+            // Request finished
+          });
+        }
       },
       {
         'http.route': req.route?.path || req.path,
