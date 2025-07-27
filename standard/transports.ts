@@ -488,6 +488,180 @@ function setupStreamableTransport(server: McpServer, port: number) {
 
 // Removed getToolCount function as it's no longer used
 
+// Export createHttpTransport for testing
+export interface HttpTransportOptions {
+  onSessionCreate?: (sessionId: string) => void;
+  onSessionDestroy?: (sessionId: string) => void;
+}
+
+export async function createHttpTransport(
+  app: express.Application,
+  port: number,
+  server: McpServer,
+  options: HttpTransportOptions = {}
+) {
+  // Store transports by session ID with session metadata
+  const transports: Record<string, {
+    transport: StreamableHTTPServerTransport;
+    sessionInfo: any;
+    createdAt: number;
+  }> = {};
+  let serverShuttingDown = false;
+  
+  const sessionManager = SessionManager.getInstance();
+
+  // Modern Streamable HTTP endpoint with integrated session and tracing
+  app.all("/mcp", async (req: Request, res: Response) => {
+    const transportTraceId = logger.startOperation("transport.mcp.request", {
+      'transport.type': 'streamable-http',
+      'transport.method': req.method,
+      'transport.url': req.url,
+      'transport.user_agent': req.headers['user-agent'] || 'unknown',
+    });
+    
+    try {
+      // Check for existing session ID
+      const mcpSessionId = req.headers["mcp-session-id"] as string | undefined;
+      let transport: StreamableHTTPServerTransport;
+      let sessionInfo: any;
+
+      if (mcpSessionId && transports[mcpSessionId]) {
+        // Reuse existing transport and session
+        const transportData = transports[mcpSessionId];
+        transport = transportData.transport;
+        sessionInfo = transportData.sessionInfo;
+        
+        logger.setSessionContext(sessionInfo.sessionId);
+      } else if (!mcpSessionId && req.method === "POST" && !serverShuttingDown) {
+        // Create new session using session manager
+        sessionInfo = createSessionFromRequest(req);
+        logger.setSessionContext(sessionInfo.sessionId);
+        
+        // Notify about session creation
+        if (options.onSessionCreate) {
+          options.onSessionCreate(sessionInfo.sessionId);
+        }
+        
+        // Create new transport for initialization
+        transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+          onsessioninitialized: (mcpSessionId) => {
+            if (serverShuttingDown) {
+              sessionManager.removeSession(sessionInfo.sessionId);
+              return;
+            }
+            
+            // Store transport with session info
+            transports[mcpSessionId] = {
+              transport,
+              sessionInfo,
+              createdAt: Date.now(),
+            };
+            
+            sessionManager.updateSession(sessionInfo.sessionId, {
+              connectionId: mcpSessionId,
+            });
+          },
+        });
+
+        // Set up onclose handler
+        transport.onclose = () => {
+          const mcpSid = transport.sessionId;
+          if (mcpSid && transports[mcpSid]) {
+            const transportData = transports[mcpSid];
+            
+            // Clean up session from session manager
+            if (transportData.sessionInfo) {
+              sessionManager.removeSession(transportData.sessionInfo.sessionId);
+              
+              // Notify about session destruction
+              if (options.onSessionDestroy) {
+                options.onSessionDestroy(transportData.sessionInfo.sessionId);
+              }
+            }
+            
+            delete transports[mcpSid];
+          }
+        };
+
+        // Connect to MCP server
+        await server.connect(transport);
+      } else if (serverShuttingDown) {
+        // Reject new connections during shutdown
+        res.status(503).json({
+          jsonrpc: "2.0",
+          error: {
+            code: -32603,
+            message: "Server is shutting down",
+          },
+          id: null,
+        });
+        return;
+      } else {
+        // Invalid request
+        res.status(400).json({
+          jsonrpc: "2.0",
+          error: {
+            code: -32600,
+            message: "Bad Request: No valid session ID provided",
+          },
+          id: null,
+        });
+        return;
+      }
+      
+      // Handle the request with the transport
+      const startTime = Date.now();
+      await transport.handleRequest(req as any, res, req.body);
+      const processingTime = Date.now() - startTime;
+      
+      // Complete transport-level tracing
+      if (transportTraceId) {
+        logger.endOperation(transportTraceId, {
+          'transport.processing.time.ms': processingTime,
+          'transport.session.id': sessionInfo?.sessionId || 'unknown',
+          'transport.success': true,
+        });
+      }
+    } catch (error) {
+      // Complete transport-level tracing with error
+      if (transportTraceId) {
+        logger.endOperation(transportTraceId, {
+          'transport.success': false,
+          'transport.error.type': error instanceof Error ? error.name : 'unknown',
+        });
+      }
+      
+      if (!res.headersSent) {
+        res.status(500).json({
+          jsonrpc: "2.0",
+          error: {
+            code: -32603,
+            message: "Internal server error",
+          },
+          id: null,
+        });
+      }
+    }
+  });
+
+  // Health check endpoint
+  app.get("/health", (_req: Request, res: Response) => {
+    res.json({
+      status: "ok",
+      transport: "streamable-http",
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Start HTTP server
+  const httpServer = app.listen(port, '127.0.0.1', () => {
+    logger.info(`Test HTTP server running on port ${port}`, "transport");
+  });
+
+  return { httpServer, transports };
+}
+
 export function parseArguments(): TransportOptions {
   const args = process.argv.slice(2);
   const options: TransportOptions = {};
