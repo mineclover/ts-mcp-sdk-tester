@@ -8,6 +8,8 @@
 
 한번에 Phase 전체를 끝내지 말고 위 단계를 거쳐서 Phase 내의 task 를 순차적으로 처리한다
 
+bun --watch index.ts --port 3000 로 서버가 켜져있기 때문에 추가로 키지 않고 작업해도 된다
+
 # basic
 
 - https://modelcontextprotocol.io/specification/2025-06-18/basic

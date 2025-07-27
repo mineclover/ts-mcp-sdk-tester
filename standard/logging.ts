@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SetLevelRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import type { EmptyResult } from "../spec/current_spec.js";
 import { logger } from "./logger.js";
 
@@ -8,7 +9,17 @@ import { logger } from "./logger.js";
  *
  * Implements the core MCP logging protocol endpoints:
  * - logging/setLevel: Set the logging level for server messages
+ * - logging/config: Configure logging settings (custom endpoint)
  */
+
+// Custom schema for logging configuration
+const LoggingConfigRequestSchema = z.object({
+  method: z.literal("logging/config"),
+  params: z.object({
+    sensitiveDataFilter: z.boolean().optional(),
+    rateLimiting: z.boolean().optional(),
+  }).optional(),
+});
 
 export function registerLoggingEndpoints(server: McpServer) {
   // Initialize logger with MCP server for client notifications
@@ -85,18 +96,8 @@ function registerLoggingConfig(server: McpServer) {
   
   // Custom logging configuration endpoint
   server.server.setRequestHandler(
-    {
-      method: "logging/config",
-      params: {
-        type: "object",
-        properties: {
-          sensitiveDataFilter: { type: "boolean" },
-          rateLimiting: { type: "boolean" },
-        },
-        additionalProperties: false,
-      },
-    } as any,
-    async (request: any, extra: any): Promise<EmptyResult> => {
+    LoggingConfigRequestSchema,
+    async (request, extra): Promise<EmptyResult> => {
       const { sensitiveDataFilter, rateLimiting } = request.params || {};
       
       await logger.logEndpointEntry("logging/config", extra.requestId, {
