@@ -1,6 +1,6 @@
 /**
  * Demo Roots Data
- * 
+ *
  * Sample root URIs for testing and demonstration purposes.
  * This file contains demo data that can be easily removed or modified.
  */

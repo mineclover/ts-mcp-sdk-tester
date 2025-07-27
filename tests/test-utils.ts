@@ -1,6 +1,6 @@
 /**
  * Test Utilities and Constants
- * 
+ *
  * Shared utilities to reduce code duplication and improve test efficiency
  */
 
@@ -31,10 +31,7 @@ export function createTestServer(
   name: string = DEFAULT_TEST_SERVER_CONFIG.name,
   version: string = DEFAULT_TEST_SERVER_CONFIG.version
 ): McpServer {
-  return new McpServer(
-    { name, version },
-    DEFAULT_TEST_CAPABILITIES
-  );
+  return new McpServer({ name, version }, DEFAULT_TEST_CAPABILITIES);
 }
 
 /**
@@ -46,7 +43,7 @@ export function createTestLifecycleManager(server?: McpServer): {
 } {
   const testServer = server || createTestServer();
   const lifecycleManager = new LifecycleManager();
-  
+
   return { lifecycleManager, server: testServer };
 }
 
@@ -58,11 +55,11 @@ export function initializeTestLifecycle(server?: McpServer): {
   server: McpServer;
 } {
   const { lifecycleManager, server: testServer } = createTestLifecycleManager(server);
-  
+
   // Initialize without throwing on missing notification handlers
   lifecycleManager.initialize(testServer);
   lifecycleManager.markInitialized();
-  
+
   return { lifecycleManager, server: testServer };
 }
 
@@ -82,7 +79,7 @@ export const TEST_TIMEOUT = 5000;
  * Wait utility for tests
  */
 export function wait(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

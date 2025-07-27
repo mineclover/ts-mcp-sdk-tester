@@ -148,97 +148,121 @@ export class Logger {
   setLevel(level: LoggingLevel) {
     const previousLevel = this.currentLevel;
     this.currentLevel = level;
-    this.info({
-      message: "Logging level changed",
-      previousLevel,
-      newLevel: level,
-      timestamp: new Date().toISOString(),
-    }, "logger");
+    this.info(
+      {
+        message: "Logging level changed",
+        previousLevel,
+        newLevel: level,
+        timestamp: new Date().toISOString(),
+      },
+      "logger"
+    );
   }
-  
+
   /**
    * Enable or disable sensitive data filtering
    */
   setSensitiveDataFilter(enabled: boolean) {
     this.sensitiveDataFilterEnabled = enabled;
-    this.info({
-      message: "Sensitive data filtering changed",
-      enabled,
-      timestamp: new Date().toISOString(),
-    }, "logger");
+    this.info(
+      {
+        message: "Sensitive data filtering changed",
+        enabled,
+        timestamp: new Date().toISOString(),
+      },
+      "logger"
+    );
   }
-  
+
   /**
    * Enable or disable rate limiting
    */
   setRateLimiting(enabled: boolean) {
     this.rateLimitingEnabled = enabled;
-    this.info({
-      message: "Log rate limiting changed",
-      enabled,
-      timestamp: new Date().toISOString(),
-    }, "logger");
+    this.info(
+      {
+        message: "Log rate limiting changed",
+        enabled,
+        timestamp: new Date().toISOString(),
+      },
+      "logger"
+    );
   }
-  
+
   /**
    * Enable or disable OTel session tracking
    */
   setOTelSession(enabled: boolean) {
     this.otelSessionEnabled = enabled;
-    this.info({
-      message: "OTel session tracking changed",
-      enabled,
-      timestamp: new Date().toISOString(),
-    }, "logger");
+    this.info(
+      {
+        message: "OTel session tracking changed",
+        enabled,
+        timestamp: new Date().toISOString(),
+      },
+      "logger"
+    );
   }
-  
+
   /**
    * Set session context for current operations
    */
   setSessionContext(sessionId: string) {
     if (this.otelSessionEnabled) {
       sessionLogger.setSessionContext(sessionId);
-      this.debug({
-        message: "Session context set",
-        sessionId,
-        timestamp: new Date().toISOString(),
-      }, "session");
+      this.debug(
+        {
+          message: "Session context set",
+          sessionId,
+          timestamp: new Date().toISOString(),
+        },
+        "session"
+      );
     }
   }
-  
+
   /**
    * Start operation tracing
    */
-  startOperation(operationName: string, attributes?: Record<string, string | number | boolean>): string | null {
+  startOperation(
+    operationName: string,
+    attributes?: Record<string, string | number | boolean>
+  ): string | null {
     if (!this.otelSessionEnabled) {
       return null;
     }
-    
+
     const traceId = sessionLogger.startOperation(operationName, attributes);
     if (traceId) {
       sessionLogger.setTraceContext(traceId);
-      this.debug({
-        message: "Operation trace started",
-        operationName,
-        traceId,
-        attributes,
-      }, "trace");
+      this.debug(
+        {
+          message: "Operation trace started",
+          operationName,
+          traceId,
+          attributes,
+        },
+        "trace"
+      );
     }
-    
+
     return traceId;
   }
-  
+
   /**
    * End operation tracing
    */
   endOperation(traceId: string, attributes?: Record<string, string | number | boolean>) {
     if (this.otelSessionEnabled && traceId) {
       sessionLogger.endOperation(traceId, attributes);
-      this.debug({
-        message: "Operation trace ended",
-        traceId,
-        attributes,
-      }, "trace");
+      this.debug(
+        {
+          message: "Operation trace ended",
+          traceId,
+          attributes,
+        },
+        "trace"
+      );
     }
   }
 
@@ -308,28 +332,28 @@ export class Logger {
     if (!this.rateLimitingEnabled) {
       return false;
     }
-    
+
     // Don't rate limit critical messages
-    if (['critical', 'alert', 'emergency'].includes(level)) {
+    if (["critical", "alert", "emergency"].includes(level)) {
       return false;
     }
-    
-    const key = `${level}:${logger}:${typeof data === 'string' ? data : JSON.stringify(data).substring(0, 50)}`;
+
+    const key = `${level}:${logger}:${typeof data === "string" ? data : JSON.stringify(data).substring(0, 50)}`;
     const now = Date.now();
-    
+
     let rateLimit = LOG_RATE_LIMITS.get(key);
     if (!rateLimit) {
       rateLimit = { lastLogTime: now, count: 1, suppressed: 0 };
       LOG_RATE_LIMITS.set(key, rateLimit);
       return false;
     }
-    
+
     // Reset count if window has passed
     if (now - rateLimit.lastLogTime > RATE_LIMIT_WINDOW) {
       if (rateLimit.suppressed > 0) {
         // Log suppressed count before resetting
-        this.logWithoutRateLimit('warning', logger, {
-          message: 'Log messages were suppressed due to rate limiting',
+        this.logWithoutRateLimit("warning", logger, {
+          message: "Log messages were suppressed due to rate limiting",
           suppressedCount: rateLimit.suppressed,
           timeWindow: RATE_LIMIT_WINDOW,
         });
@@ -339,17 +363,17 @@ export class Logger {
       rateLimit.lastLogTime = now;
       return false;
     }
-    
+
     // Check if rate limit exceeded
     if (rateLimit.count >= MAX_LOGS_PER_WINDOW) {
       rateLimit.suppressed++;
       return true;
     }
-    
+
     rateLimit.count++;
     return false;
   }
-  
+
   /**
    * Filter sensitive data from log messages
    */
@@ -357,41 +381,41 @@ export class Logger {
     if (!this.sensitiveDataFilterEnabled) {
       return data;
     }
-    
-    if (typeof data === 'string') {
+
+    if (typeof data === "string") {
       // Use optimized single regex pattern
       if (SENSITIVE_PATTERN.test(data)) {
-        return '[FILTERED_SENSITIVE_DATA]';
+        return "[FILTERED_SENSITIVE_DATA]";
       }
       return data;
     }
-    
-    if (typeof data === 'object' && data !== null) {
+
+    if (typeof data === "object" && data !== null) {
       const filtered: Record<string, unknown> | unknown[] = Array.isArray(data) ? [] : {};
-      
+
       for (const [key, value] of Object.entries(data)) {
         // Use optimized single regex pattern for key checking
         const isSensitiveKey = SENSITIVE_PATTERN.test(key);
-        
+
         if (isSensitiveKey) {
-          (filtered as Record<string, unknown>)[key] = '[FILTERED]';
-        } else if (typeof value === 'string') {
+          (filtered as Record<string, unknown>)[key] = "[FILTERED]";
+        } else if (typeof value === "string") {
           // Use optimized single regex pattern for value checking
           const isSensitiveValue = SENSITIVE_PATTERN.test(value);
-          (filtered as Record<string, unknown>)[key] = isSensitiveValue ? '[FILTERED]' : value;
-        } else if (typeof value === 'object' && value !== null) {
+          (filtered as Record<string, unknown>)[key] = isSensitiveValue ? "[FILTERED]" : value;
+        } else if (typeof value === "object" && value !== null) {
           (filtered as Record<string, unknown>)[key] = this.filterSensitiveData(value);
         } else {
           (filtered as Record<string, unknown>)[key] = value;
         }
       }
-      
+
       return filtered;
     }
-    
+
     return data;
   }
-  
+
   /**
    * Log without rate limiting (for internal use)
    */
@@ -437,7 +461,7 @@ export class Logger {
       await this.sendToClient(level, logger, filteredData);
     }
   }
-  
+
   /**
    * Core logging method with rate limiting and filtering
    */
@@ -446,7 +470,7 @@ export class Logger {
     if (this.shouldRateLimit(level, logger, data)) {
       return; // Silently drop the log
     }
-    
+
     await this.logWithoutRateLimit(level, logger, data);
   }
 
@@ -506,40 +530,47 @@ export class Logger {
   /**
    * Log MCP endpoint entry (INFO level) with automatic operation tracing
    */
-  async logEndpointEntry(endpoint: string, requestId?: string | number, params?: unknown): Promise<string | null> {
+  async logEndpointEntry(
+    endpoint: string,
+    requestId?: string | number,
+    params?: unknown
+  ): Promise<string | null> {
     const idStr = requestId ? `[${requestId}]` : "";
     const paramInfo = params ? ` ${JSON.stringify(params).substring(0, 100)}` : "";
-    
+
     // Start operation tracing for endpoint
     const traceId = this.startOperation(`mcp.${endpoint}`, {
-      'mcp.endpoint': endpoint,
-      'mcp.request.id': requestId ? String(requestId) : 'unknown',
+      "mcp.endpoint": endpoint,
+      "mcp.request.id": requestId ? String(requestId) : "unknown",
       ...this.extractMcpAttributes(endpoint, params),
     });
-    
+
     await this.info(`🔌 ${endpoint} triggered${idStr}${paramInfo}`, "endpoint");
     return traceId;
   }
-  
+
   /**
    * Extract MCP-specific attributes from endpoint and parameters
    */
-  private extractMcpAttributes(endpoint: string, params?: unknown): Record<string, string | number | boolean> {
+  private extractMcpAttributes(
+    endpoint: string,
+    params?: unknown
+  ): Record<string, string | number | boolean> {
     const attributes: Record<string, string | number | boolean> = {};
-    
-    if (params && typeof params === 'object' && params !== null) {
+
+    if (params && typeof params === "object" && params !== null) {
       const p = params as Record<string, unknown>;
-      
+
       // Extract common MCP attributes
-      if (p.uri && typeof p.uri === 'string') attributes['mcp.resource.uri'] = p.uri;
-      if (p.name && typeof p.name === 'string') {
-        if (endpoint.includes('tool')) attributes['mcp.tool.name'] = p.name;
-        else if (endpoint.includes('prompt')) attributes['mcp.prompt.name'] = p.name;
+      if (p.uri && typeof p.uri === "string") attributes["mcp.resource.uri"] = p.uri;
+      if (p.name && typeof p.name === "string") {
+        if (endpoint.includes("tool")) attributes["mcp.tool.name"] = p.name;
+        else if (endpoint.includes("prompt")) attributes["mcp.prompt.name"] = p.name;
       }
-      if (p.cursor && typeof p.cursor === 'string') attributes['mcp.request.cursor'] = p.cursor;
-      if (typeof p.hasMore === 'boolean') attributes['mcp.response.has_more'] = p.hasMore;
+      if (p.cursor && typeof p.cursor === "string") attributes["mcp.request.cursor"] = p.cursor;
+      if (typeof p.hasMore === "boolean") attributes["mcp.response.has_more"] = p.hasMore;
     }
-    
+
     return attributes;
   }
 
@@ -590,33 +621,38 @@ export class Logger {
   /**
    * Log method exit with result (DEBUG level) and end operation tracing
    */
-  async logMethodExit(methodName: string, result?: unknown, loggerName = "method", traceId?: string | null) {
+  async logMethodExit(
+    methodName: string,
+    result?: unknown,
+    loggerName = "method",
+    traceId?: string | null
+  ) {
     if (this.shouldLog("debug")) {
       const resultStr = result ? JSON.stringify(result).substring(0, 100) : "void";
       await this.debug(`← ${methodName} → ${resultStr}`, loggerName);
     }
-    
+
     // End operation tracing if traceId provided
     if (traceId) {
       const attributes: Record<string, string | number | boolean> = {
-        'mcp.method.result': result ? 'success' : 'void',
+        "mcp.method.result": result ? "success" : "void",
       };
-      
+
       // Extract performance metrics from result
-      if (result && typeof result === 'object' && result !== null) {
+      if (result && typeof result === "object" && result !== null) {
         const r = result as Record<string, unknown>;
-        if (typeof r.responseTimeMs === 'number') {
-          attributes['mcp.response.time.ms'] = r.responseTimeMs;
+        if (typeof r.responseTimeMs === "number") {
+          attributes["mcp.response.time.ms"] = r.responseTimeMs;
         }
-        if (typeof r.requestId === 'string' || typeof r.requestId === 'number') {
-          attributes['mcp.request.id'] = String(r.requestId);
+        if (typeof r.requestId === "string" || typeof r.requestId === "number") {
+          attributes["mcp.request.id"] = String(r.requestId);
         }
       }
-      
+
       this.endOperation(traceId, attributes);
     }
   }
-  
+
   /**
    * Get session and trace statistics
    */
@@ -643,14 +679,14 @@ export class Logger {
         },
       };
     }
-    
+
     const stats = sessionLogger.getSessionStats();
     return {
       sessionEnabled: true,
       sessionStats: {
         activeSessions: stats.activeSessions,
         activeTraces: stats.activeTraces,
-        sessions: stats.sessions.map(s => ({
+        sessions: stats.sessions.map((s) => ({
           sessionId: s.sessionId,
           clientId: s.clientId,
           transportType: s.transportType,

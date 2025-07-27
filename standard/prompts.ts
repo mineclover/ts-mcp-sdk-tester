@@ -23,11 +23,11 @@ import { paginateArray } from "./pagination-utils.js";
  */
 
 export function registerPromptsEndpoints(server: McpServer) {
-  logger.logMethodEntry("registerPromptsEndpoints", { serverType: 'McpServer' }, "prompts");
-  
+  logger.logMethodEntry("registerPromptsEndpoints", { serverType: "McpServer" }, "prompts");
+
   registerListPrompts(server);
   registerGetPrompt(server);
-  
+
   logger.info("All prompt endpoints registered successfully", "prompts");
 }
 
@@ -37,7 +37,7 @@ export function registerPromptsEndpoints(server: McpServer) {
  */
 function registerListPrompts(server: McpServer) {
   logger.logMethodEntry("registerListPrompts", undefined, "prompts");
-  
+
   server.server.setRequestHandler(
     ListPromptsRequestSchema,
     async (request, extra): Promise<ListPromptsResult> => {
@@ -69,12 +69,17 @@ function registerListPrompts(server: McpServer) {
           },
         };
 
-        await logger.logMethodExit("prompts/list", {
-          requestId: extra.requestId,
-          promptCount: result.prompts.length,
-          totalCount: result._meta?.totalCount,
-          hasMore: result._meta?.hasMore,
-        }, "prompts", traceId);
+        await logger.logMethodExit(
+          "prompts/list",
+          {
+            requestId: extra.requestId,
+            promptCount: result.prompts.length,
+            totalCount: result._meta?.totalCount,
+            hasMore: result._meta?.hasMore,
+          },
+          "prompts",
+          traceId
+        );
 
         return result;
       } catch (error) {
@@ -95,12 +100,12 @@ function registerListPrompts(server: McpServer) {
  */
 function registerGetPrompt(server: McpServer) {
   logger.logMethodEntry("registerGetPrompt", undefined, "prompts");
-  
+
   server.server.setRequestHandler(
     GetPromptRequestSchema,
     async (request, extra): Promise<GetPromptResult> => {
       const { name, arguments: args } = request.params;
-      
+
       const traceId = await logger.logEndpointEntry("prompts/get", extra.requestId, {
         promptName: name,
         hasArguments: !!args && Object.keys(args).length > 0,
@@ -108,7 +113,7 @@ function registerGetPrompt(server: McpServer) {
 
       try {
         logger.debug(`Getting prompt: ${name}`, "prompts");
-        
+
         // Get demo prompt messages from separated demo data
         let description: string;
         let messages: PromptMessage[];
@@ -116,9 +121,9 @@ function registerGetPrompt(server: McpServer) {
         try {
           messages = getDemoPromptMessages(name, args || {});
           logger.debug(`Generated ${messages.length} messages for prompt: ${name}`, "prompts");
-          
+
           // Find the prompt description from the demo data
-          const prompt = DEMO_PROMPTS.find(p => p.name === name);
+          const prompt = DEMO_PROMPTS.find((p) => p.name === name);
           description = prompt?.description || `Prompt: ${name}`;
         } catch (error) {
           logger.warning(`Prompt not found: ${name}`, "prompts");
@@ -137,12 +142,17 @@ function registerGetPrompt(server: McpServer) {
           },
         };
 
-        await logger.logMethodExit("prompts/get", {
-          requestId: extra.requestId,
-          promptName: name,
-          messageCount: messages.length,
-          argumentCount: args ? Object.keys(args).length : 0,
-        }, "prompts", traceId);
+        await logger.logMethodExit(
+          "prompts/get",
+          {
+            requestId: extra.requestId,
+            promptName: name,
+            messageCount: messages.length,
+            argumentCount: args ? Object.keys(args).length : 0,
+          },
+          "prompts",
+          traceId
+        );
 
         return result;
       } catch (error) {

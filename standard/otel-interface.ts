@@ -1,7 +1,7 @@
 /**
  * OpenTelemetry Interface for MCP Server Logging
- * 
- * Provides OpenTelemetry-compliant observability interfaces that can be 
+ *
+ * Provides OpenTelemetry-compliant observability interfaces that can be
  * integrated with existing logging system for distributed tracing,
  * metrics collection, and structured logging.
  */
@@ -12,22 +12,22 @@ export interface OTelSemconv {
   SERVICE_NAME: string;
   SERVICE_VERSION: string;
   SERVICE_INSTANCE_ID: string;
-  
+
   // HTTP attributes
   HTTP_METHOD: string;
   HTTP_URL: string;
   HTTP_STATUS_CODE: string;
   HTTP_USER_AGENT: string;
-  
+
   // RPC attributes (for MCP JSON-RPC)
   RPC_METHOD: string;
   RPC_SERVICE: string;
   RPC_SYSTEM: string;
-  
+
   // Error attributes
   ERROR_TYPE: string;
   ERROR_MESSAGE: string;
-  
+
   // Custom MCP attributes
   MCP_ENDPOINT: string;
   MCP_REQUEST_ID: string;
@@ -52,7 +52,7 @@ export interface OTelSpan {
   startTime: number;
   endTime?: number;
   duration?: number;
-  status: 'ok' | 'error' | 'timeout';
+  status: "ok" | "error" | "timeout";
   tags: Record<string, string | number | boolean>;
   logs: OTelLog[];
 }
@@ -60,7 +60,7 @@ export interface OTelSpan {
 // Metric interface for performance monitoring
 export interface OTelMetric {
   name: string;
-  type: 'counter' | 'gauge' | 'histogram' | 'summary';
+  type: "counter" | "gauge" | "histogram" | "summary";
   value: number;
   timestamp: number;
   labels: Record<string, string>;
@@ -83,12 +83,12 @@ export interface OTelLog {
 
 // Resource interface for service identification
 export interface OTelResource {
-  'service.name': string;
-  'service.version': string;
-  'service.instance.id': string;
-  'telemetry.sdk.name': string;
-  'telemetry.sdk.language': string;
-  'telemetry.sdk.version': string;
+  "service.name": string;
+  "service.version": string;
+  "service.instance.id": string;
+  "telemetry.sdk.name": string;
+  "telemetry.sdk.language": string;
+  "telemetry.sdk.version": string;
   [key: string]: string | number | boolean;
 }
 
@@ -119,7 +119,7 @@ export interface OTelTracer {
 // Span creation options
 export interface OTelSpanOptions {
   parent?: OTelSpan | OTelTraceContext;
-  kind?: 'internal' | 'server' | 'client' | 'producer' | 'consumer';
+  kind?: "internal" | "server" | "client" | "producer" | "consumer";
   attributes?: Record<string, string | number | boolean>;
   links?: OTelSpanLink[];
   startTime?: number;
@@ -143,7 +143,7 @@ export interface OTelMeter {
 export interface OTelInstrumentOptions {
   description?: string;
   unit?: string;
-  valueType?: 'int' | 'double';
+  valueType?: "int" | "double";
 }
 
 // Counter instrument for incrementing metrics
@@ -236,7 +236,7 @@ export interface OTelSampler {
 }
 
 export interface OTelSamplingResult {
-  decision: 'NOT_RECORD' | 'RECORD' | 'RECORD_AND_SAMPLE';
+  decision: "NOT_RECORD" | "RECORD" | "RECORD_AND_SAMPLE";
   attributes?: Record<string, string | number | boolean>;
 }
 
@@ -273,74 +273,74 @@ export interface OTelMetricReader {
 // MCP-specific OTel extensions
 export interface McpOTelAttributes {
   // MCP protocol attributes
-  'mcp.version': string;
-  'mcp.endpoint': string;
-  'mcp.method': string;
-  'mcp.request.id': string;
-  'mcp.client.id'?: string;
-  'mcp.server.name': string;
-  'mcp.transport.type': 'stdio' | 'http' | 'websocket';
-  
+  "mcp.version": string;
+  "mcp.endpoint": string;
+  "mcp.method": string;
+  "mcp.request.id": string;
+  "mcp.client.id"?: string;
+  "mcp.server.name": string;
+  "mcp.transport.type": "stdio" | "http" | "websocket";
+
   // Request/response attributes
-  'mcp.request.size'?: number;
-  'mcp.response.size'?: number;
-  'mcp.request.cursor'?: string;
-  'mcp.response.has_more'?: boolean;
-  
+  "mcp.request.size"?: number;
+  "mcp.response.size"?: number;
+  "mcp.request.cursor"?: string;
+  "mcp.response.has_more"?: boolean;
+
   // Tool/resource specific
-  'mcp.tool.name'?: string;
-  'mcp.resource.uri'?: string;
-  'mcp.prompt.name'?: string;
-  
+  "mcp.tool.name"?: string;
+  "mcp.resource.uri"?: string;
+  "mcp.prompt.name"?: string;
+
   // Performance attributes
-  'mcp.duration.ms': number;
-  'mcp.queue.time.ms'?: number;
-  'mcp.processing.time.ms'?: number;
+  "mcp.duration.ms": number;
+  "mcp.queue.time.ms"?: number;
+  "mcp.processing.time.ms"?: number;
 }
 
 // MCP-specific metric names
 export interface McpOTelMetrics {
   // Request metrics
-  MCP_REQUESTS_TOTAL: 'mcp.requests.total';
-  MCP_REQUEST_DURATION: 'mcp.request.duration';
-  MCP_REQUEST_SIZE: 'mcp.request.size';
-  MCP_RESPONSE_SIZE: 'mcp.response.size';
-  
+  MCP_REQUESTS_TOTAL: "mcp.requests.total";
+  MCP_REQUEST_DURATION: "mcp.request.duration";
+  MCP_REQUEST_SIZE: "mcp.request.size";
+  MCP_RESPONSE_SIZE: "mcp.response.size";
+
   // Error metrics
-  MCP_ERRORS_TOTAL: 'mcp.errors.total';
-  MCP_ERROR_RATE: 'mcp.error.rate';
-  
+  MCP_ERRORS_TOTAL: "mcp.errors.total";
+  MCP_ERROR_RATE: "mcp.error.rate";
+
   // Resource metrics
-  MCP_ACTIVE_CONNECTIONS: 'mcp.connections.active';
-  MCP_CONNECTION_DURATION: 'mcp.connection.duration';
-  
+  MCP_ACTIVE_CONNECTIONS: "mcp.connections.active";
+  MCP_CONNECTION_DURATION: "mcp.connection.duration";
+
   // Performance metrics
-  MCP_QUEUE_SIZE: 'mcp.queue.size';
-  MCP_PROCESSING_TIME: 'mcp.processing.time';
-  MCP_MEMORY_USAGE: 'mcp.memory.usage';
-  
+  MCP_QUEUE_SIZE: "mcp.queue.size";
+  MCP_PROCESSING_TIME: "mcp.processing.time";
+  MCP_MEMORY_USAGE: "mcp.memory.usage";
+
   // Tool metrics
-  MCP_TOOL_CALLS_TOTAL: 'mcp.tool.calls.total';
-  MCP_TOOL_DURATION: 'mcp.tool.duration';
-  MCP_TOOL_ERRORS: 'mcp.tool.errors';
-  
+  MCP_TOOL_CALLS_TOTAL: "mcp.tool.calls.total";
+  MCP_TOOL_DURATION: "mcp.tool.duration";
+  MCP_TOOL_ERRORS: "mcp.tool.errors";
+
   // Resource metrics
-  MCP_RESOURCE_READS_TOTAL: 'mcp.resource.reads.total';
-  MCP_RESOURCE_READ_DURATION: 'mcp.resource.read.duration';
-  MCP_RESOURCE_SIZE: 'mcp.resource.size';
+  MCP_RESOURCE_READS_TOTAL: "mcp.resource.reads.total";
+  MCP_RESOURCE_READ_DURATION: "mcp.resource.read.duration";
+  MCP_RESOURCE_SIZE: "mcp.resource.size";
 }
 
 // MCP-specific span names
 export interface McpOTelSpanNames {
-  MCP_REQUEST: 'mcp.request';
-  MCP_TOOL_CALL: 'mcp.tool.call';
-  MCP_RESOURCE_READ: 'mcp.resource.read';
-  MCP_PROMPT_GET: 'mcp.prompt.get';
-  MCP_COMPLETION: 'mcp.completion';
-  MCP_SAMPLING: 'mcp.sampling';
-  MCP_LIFECYCLE: 'mcp.lifecycle';
-  MCP_TRANSPORT: 'mcp.transport';
-  MCP_AUTH: 'mcp.auth';
+  MCP_REQUEST: "mcp.request";
+  MCP_TOOL_CALL: "mcp.tool.call";
+  MCP_RESOURCE_READ: "mcp.resource.read";
+  MCP_PROMPT_GET: "mcp.prompt.get";
+  MCP_COMPLETION: "mcp.completion";
+  MCP_SAMPLING: "mcp.sampling";
+  MCP_LIFECYCLE: "mcp.lifecycle";
+  MCP_TRANSPORT: "mcp.transport";
+  MCP_AUTH: "mcp.auth";
 }
 
 // Integration interface for existing logger
@@ -352,24 +352,24 @@ export interface OTelLoggerIntegration {
     logger: string,
     traceContext?: OTelTraceContext
   ): OTelLog;
-  
+
   // Create span for operation
   createOperationSpan(
     operation: string,
     attributes?: Record<string, string | number | boolean>
   ): OTelSpan;
-  
+
   // Record metric
   recordMetric(
     name: string,
     value: number,
-    type: 'counter' | 'gauge' | 'histogram',
+    type: "counter" | "gauge" | "histogram",
     labels?: Record<string, string>
   ): void;
-  
+
   // Extract trace context from headers
   extractTraceContext(headers: Record<string, string>): OTelTraceContext | null;
-  
+
   // Inject trace context into headers
   injectTraceContext(context: OTelTraceContext, headers: Record<string, string>): void;
 }
@@ -384,19 +384,19 @@ export interface OTelFactory {
 
 // Default resource attributes for MCP server
 export const MCP_OTEL_RESOURCE_DEFAULTS: OTelResource = {
-  'service.name': 'mcp-server',
-  'service.version': '1.0.0',
-  'service.instance.id': process.env.HOSTNAME || 'localhost',
-  'telemetry.sdk.name': 'opentelemetry',
-  'telemetry.sdk.language': 'typescript',
-  'telemetry.sdk.version': '1.0.0',
-  'mcp.transport.type': 'stdio',
-  'mcp.protocol.version': '2024-11-05',
+  "service.name": "mcp-server",
+  "service.version": "1.0.0",
+  "service.instance.id": process.env.HOSTNAME || "localhost",
+  "telemetry.sdk.name": "opentelemetry",
+  "telemetry.sdk.language": "typescript",
+  "telemetry.sdk.version": "1.0.0",
+  "mcp.transport.type": "stdio",
+  "mcp.protocol.version": "2024-11-05",
 };
 
 // Default instrumentation scope
 export const MCP_OTEL_INSTRUMENTATION_SCOPE: OTelInstrumentationScope = {
-  name: '@mcp/server-instrumentation',
-  version: '1.0.0',
-  schemaUrl: 'https://opentelemetry.io/schemas/1.21.0',
+  name: "@mcp/server-instrumentation",
+  version: "1.0.0",
+  schemaUrl: "https://opentelemetry.io/schemas/1.21.0",
 };

@@ -1,6 +1,6 @@
 /**
  * Authentication and Server Configuration
- * 
+ *
  * Centralized configuration for MCP server authentication,
  * capabilities, and client instructions.
  */
@@ -9,13 +9,8 @@ import type { ServerCapabilities, Implementation } from "../spec/current_spec.js
 import { APP_CONFIG } from "./constants.js";
 
 export const AUTH_CONFIG = {
-  // Supported protocol versions in order of preference  
-  supportedVersions: [
-    APP_CONFIG.protocol,
-    "2025-03-26", 
-    "2024-11-05", 
-    "2024-10-07"
-  ] as const,
+  // Supported protocol versions in order of preference
+  supportedVersions: [APP_CONFIG.protocol, "2025-03-26", "2024-11-05", "2024-10-07"] as const,
 
   // Server capabilities that this implementation provides
   capabilities: {

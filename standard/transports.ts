@@ -8,11 +8,11 @@ import { APP_CONFIG, TRANSPORT_CONFIG } from "./constants.js";
 import { ErrorType, getErrorCode, logger } from "./logger.js";
 import { lifecycleManager, getServerStatus } from "./lifecycle.js";
 import { createAuthMiddleware, logAuthEvent } from "./authorization.js";
-import { 
-  SessionManager, 
-  createSessionFromRequest, 
-  extractTraceContextFromHeaders, 
-  injectTraceContextIntoHeaders 
+import {
+  SessionManager,
+  createSessionFromRequest,
+  extractTraceContextFromHeaders,
+  injectTraceContextIntoHeaders,
 } from "./otel-session.js";
 /**
  * Transport Management Features
@@ -49,13 +49,13 @@ function setupStdioTransport(server: McpServer) {
 
   try {
     const transport = new StdioServerTransport();
-    
+
     // Setup transport-specific shutdown handling
     lifecycleManager.onShutdown(async () => {
       logger.info("Closing stdio transport...", "transport");
       transport.close();
     });
-    
+
     server.connect(transport);
     logger.info("MCP Server running on stdio transport", "transport");
   } catch (error) {
@@ -70,88 +70,99 @@ function setupStdioTransport(server: McpServer) {
 // Streamable HTTP transport
 function setupStreamableTransport(server: McpServer, port: number) {
   const app = express();
-  
+
   // Security: Restrict CORS to localhost for safety
   const allowedOrigins = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
     `http://localhost:${port}`,
     `http://127.0.0.1:${port}`,
     // Allow MCP Inspector and development tools
-    'http://localhost:8080',
-    'http://127.0.0.1:8080',
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
   ];
-  
-  app.use(cors({ 
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      
-      logger.warning(`Blocked request from unauthorized origin: ${origin}`, "transport");
-      callback(new Error('Not allowed by CORS'));
-    },
-    exposedHeaders: ["Mcp-Session-Id"],
-    credentials: true,
-  }));
-  
-  app.use(express.json({ limit: '10mb' })); // Limit request size
-  
+
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+
+        logger.warning(`Blocked request from unauthorized origin: ${origin}`, "transport");
+        callback(new Error("Not allowed by CORS"));
+      },
+      exposedHeaders: ["Mcp-Session-Id"],
+      credentials: true,
+    })
+  );
+
+  app.use(express.json({ limit: "10mb" })); // Limit request size
+
   // Apply authorization and security middleware
-  const envType = (process.env.NODE_ENV as 'development' | 'production' | 'testing') || 'development';
+  const envType =
+    (process.env.NODE_ENV as "development" | "production" | "testing") || "development";
   const authMiddleware = createAuthMiddleware({
     environment: envType,
-    apiKeys: process.env.MCP_API_KEYS?.split(',').filter(Boolean),
+    apiKeys: process.env.MCP_API_KEYS?.split(",").filter(Boolean),
     customRateLimit: {
-      maxRequests: parseInt(process.env.MCP_RATE_LIMIT || '100'),
-      windowMs: parseInt(process.env.MCP_RATE_WINDOW || '60000'),
+      maxRequests: parseInt(process.env.MCP_RATE_LIMIT || "100"),
+      windowMs: parseInt(process.env.MCP_RATE_WINDOW || "60000"),
     },
   });
-  
-  authMiddleware.forEach(middleware => app.use(middleware));
+
+  authMiddleware.forEach((middleware) => app.use(middleware));
 
   // Store transports by session ID with session metadata
-  const transports: Record<string, {
-    transport: StreamableHTTPServerTransport;
-    sessionInfo: any;
-    createdAt: number;
-  }> = {};
+  const transports: Record<
+    string,
+    {
+      transport: StreamableHTTPServerTransport;
+      sessionInfo: any;
+      createdAt: number;
+    }
+  > = {};
   let serverShuttingDown = false;
-  
+
   const sessionManager = SessionManager.getInstance();
 
   // Modern Streamable HTTP endpoint with integrated session and tracing
   app.all("/mcp", async (req: Request, res: Response) => {
     // Start transport-level tracing for the entire MCP request
     const transportTraceId = logger.startOperation("transport.mcp.request", {
-      'transport.type': 'streamable-http',
-      'transport.method': req.method,
-      'transport.url': req.url,
-      'transport.user_agent': req.headers['user-agent'] || 'unknown',
+      "transport.type": "streamable-http",
+      "transport.method": req.method,
+      "transport.url": req.url,
+      "transport.user_agent": req.headers["user-agent"] || "unknown",
     });
-    
+
     logger.debug(`Received ${req.method} request to /mcp (Streamable HTTP)`, "transport");
-    
+
     // Extract parent trace context from headers if present
-    const parentTraceContext = extractTraceContextFromHeaders(req.headers as Record<string, string>);
+    const parentTraceContext = extractTraceContextFromHeaders(
+      req.headers as Record<string, string>
+    );
     if (parentTraceContext.traceId) {
       logger.debug(`Request has parent trace context: ${parentTraceContext.traceId}`, "transport");
     }
-    
+
     // Log authentication event for audit
-    logAuthEvent(req, 'mcp_request', {
+    logAuthEvent(req, "mcp_request", {
       method: req.method,
       sessionId: req.headers["mcp-session-id"],
       traceId: transportTraceId,
     });
-    
+
     // Auth middleware guarantees req.auth exists after middleware chain
     // TypeScript will recognize this after auth middleware has run
     if (req.auth) {
-      logger.debug(`MCP request from ${req.auth.authMethod} client (authenticated: ${req.auth.isAuthenticated})`, "transport");
+      logger.debug(
+        `MCP request from ${req.auth.authMethod} client (authenticated: ${req.auth.isAuthenticated})`,
+        "transport"
+      );
     }
 
     try {
@@ -165,37 +176,40 @@ function setupStreamableTransport(server: McpServer, port: number) {
         const transportData = transports[mcpSessionId];
         transport = transportData.transport;
         sessionInfo = transportData.sessionInfo;
-        
+
         // Set session context for logging
         logger.setSessionContext(sessionInfo.sessionId);
-        
+
         logger.debug(`Reusing existing MCP session: ${mcpSessionId}`, "transport");
       } else if (!mcpSessionId && req.method === "POST" && !serverShuttingDown) {
         // Create new session using session manager
         sessionInfo = createSessionFromRequest(req);
         logger.setSessionContext(sessionInfo.sessionId);
-        
+
         logger.info(`Creating new MCP session: ${sessionInfo.sessionId}`, "transport");
-        
+
         // Create new transport for initialization
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (mcpSessionId) => {
             if (serverShuttingDown) {
-              logger.warning(`MCP session ${mcpSessionId} initialized during shutdown, will be closed`, "transport");
+              logger.warning(
+                `MCP session ${mcpSessionId} initialized during shutdown, will be closed`,
+                "transport"
+              );
               sessionManager.removeSession(sessionInfo.sessionId);
               return;
             }
-            
+
             logger.info(`Streamable HTTP session initialized: ${mcpSessionId}`, "transport");
-            
+
             // Store transport with session info
             transports[mcpSessionId] = {
               transport,
               sessionInfo,
               createdAt: Date.now(),
             };
-            
+
             // Update session with MCP session ID
             sessionManager.updateSession(sessionInfo.sessionId, {
               connectionId: mcpSessionId,
@@ -209,13 +223,16 @@ function setupStreamableTransport(server: McpServer, port: number) {
           if (mcpSid && transports[mcpSid]) {
             const transportData = transports[mcpSid];
             logger.info(`Transport closed for MCP session ${mcpSid}`, "transport");
-            
+
             // Clean up session from session manager
             if (transportData.sessionInfo) {
               sessionManager.removeSession(transportData.sessionInfo.sessionId);
-              logger.debug(`Cleaned up session: ${transportData.sessionInfo.sessionId}`, "transport");
+              logger.debug(
+                `Cleaned up session: ${transportData.sessionInfo.sessionId}`,
+                "transport"
+              );
             }
-            
+
             delete transports[mcpSid];
           }
         };
@@ -255,35 +272,35 @@ function setupStreamableTransport(server: McpServer, port: number) {
           spanId: transportTraceId.substring(16), // Use last 16 chars as span ID
         });
       }
-      
+
       // Handle the request with the transport
       // Type cast to resolve AuthInfo vs AuthContext incompatibility
       const startTime = Date.now();
       await transport.handleRequest(req as any, res, req.body);
       const processingTime = Date.now() - startTime;
-      
+
       // Complete transport-level tracing
       if (transportTraceId) {
         logger.endOperation(transportTraceId, {
-          'transport.processing.time.ms': processingTime,
-          'transport.session.id': sessionInfo?.sessionId || 'unknown',
-          'transport.mcp.session.id': mcpSessionId || 'unknown',
-          'transport.success': true,
-          'transport.response.status': res.statusCode,
+          "transport.processing.time.ms": processingTime,
+          "transport.session.id": sessionInfo?.sessionId || "unknown",
+          "transport.mcp.session.id": mcpSessionId || "unknown",
+          "transport.success": true,
+          "transport.response.status": res.statusCode,
         });
       }
-      
+
       logger.debug(`MCP request processed in ${processingTime}ms`, "transport");
     } catch (error) {
       // Complete transport-level tracing with error
       if (transportTraceId) {
         logger.endOperation(transportTraceId, {
-          'transport.success': false,
-          'transport.error.type': error instanceof Error ? error.name : 'unknown',
-          'transport.error.message': error instanceof Error ? error.message : String(error),
+          "transport.success": false,
+          "transport.error.type": error instanceof Error ? error.name : "unknown",
+          "transport.error.message": error instanceof Error ? error.message : String(error),
         });
       }
-      
+
       logger.logServerError(
         error instanceof Error ? error : new Error(String(error)),
         "HTTP request handling",
@@ -312,7 +329,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
   app.get("/health", (_req: Request, res: Response) => {
     const serverStatus = getServerStatus();
     const otelStats = logger.getOTelStats();
-    
+
     res.json({
       status: serverStatus.isOperational ? "ok" : "initializing",
       transport: "streamable-http",
@@ -331,7 +348,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
   app.get("/info", (_req: Request, res: Response) => {
     const serverStatus = getServerStatus();
     const otelStats = logger.getOTelStats();
-    
+
     res.json({
       name: APP_CONFIG.displayName,
       version: APP_CONFIG.version,
@@ -345,17 +362,17 @@ function setupStreamableTransport(server: McpServer, port: number) {
         sessionTracking: otelStats.sessionEnabled,
         activeSessions: otelStats.sessionStats.activeSessions,
         activeTraces: otelStats.sessionStats.activeTraces,
-        sessionDetails: otelStats.sessionStats.sessions.map(s => ({
-          sessionId: s.sessionId.substring(0, 12) + '...', // Truncate for privacy
-          clientId: s.clientId?.substring(0, 20) + '...' || 'unknown',
+        sessionDetails: otelStats.sessionStats.sessions.map((s) => ({
+          sessionId: s.sessionId.substring(0, 12) + "...", // Truncate for privacy
+          clientId: s.clientId?.substring(0, 20) + "..." || "unknown",
           transportType: s.transportType,
           uptime: s.uptime,
         })),
       },
       security: {
         corsEnabled: true,
-        allowedOrigins: 'localhost only',
-        requestSizeLimit: '10mb',
+        allowedOrigins: "localhost only",
+        requestSizeLimit: "10mb",
         authenticationEnabled: true,
         sessionTrackingEnabled: otelStats.sessionEnabled,
       },
@@ -399,7 +416,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
         <ul>
           <li><strong>Health Check:</strong> <a href="/health" target="_blank">/health</a></li>
           <li><strong>Server Info:</strong> <a href="/info" target="_blank">/info</a></li>
-          <li><strong>Status:</strong> <span class="tools-count">${serverStatus.isOperational ? 'Operational' : 'Initializing'}</span></li>
+          <li><strong>Status:</strong> <span class="tools-count">${serverStatus.isOperational ? "Operational" : "Initializing"}</span></li>
         </ul>
         
         <h2>Available Features</h2>
@@ -433,7 +450,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
     `);
   });
 
-  const httpServer = app.listen(port, '127.0.0.1', () => {
+  const httpServer = app.listen(port, "127.0.0.1", () => {
     logger.info(
       `MCP Server running on http://localhost:${port} (Streamable HTTP transport)`,
       "transport"
@@ -448,7 +465,7 @@ function setupStreamableTransport(server: McpServer, port: number) {
   lifecycleManager.onShutdown(async () => {
     logger.info("Shutting down Streamable HTTP server...", "transport");
     serverShuttingDown = true;
-    
+
     // Close all active transports and sessions
     const transportIds = Object.keys(transports);
     for (const mcpSessionId of transportIds) {
@@ -456,12 +473,12 @@ function setupStreamableTransport(server: McpServer, port: number) {
         const transportData = transports[mcpSessionId];
         if (transportData) {
           logger.debug(`Closing transport session: ${mcpSessionId}`, "transport");
-          
+
           // Clean up session from session manager
           if (transportData.sessionInfo) {
             sessionManager.removeSession(transportData.sessionInfo.sessionId);
           }
-          
+
           transportData.transport.close();
           delete transports[mcpSessionId];
         }
@@ -469,9 +486,9 @@ function setupStreamableTransport(server: McpServer, port: number) {
         logger.warning(`Error closing transport session ${mcpSessionId}: ${error}`, "transport");
       }
     }
-    
+
     logger.info(`Closed ${transportIds.length} transport sessions`, "transport");
-    
+
     // Close HTTP server
     return new Promise<void>((resolve) => {
       httpServer.close((error) => {
@@ -501,24 +518,27 @@ export async function createHttpTransport(
   options: HttpTransportOptions = {}
 ) {
   // Store transports by session ID with session metadata
-  const transports: Record<string, {
-    transport: StreamableHTTPServerTransport;
-    sessionInfo: any;
-    createdAt: number;
-  }> = {};
-  let serverShuttingDown = false;
-  
+  const transports: Record<
+    string,
+    {
+      transport: StreamableHTTPServerTransport;
+      sessionInfo: any;
+      createdAt: number;
+    }
+  > = {};
+  const serverShuttingDown = false;
+
   const sessionManager = SessionManager.getInstance();
 
   // Modern Streamable HTTP endpoint with integrated session and tracing
   app.all("/mcp", async (req: Request, res: Response) => {
     const transportTraceId = logger.startOperation("transport.mcp.request", {
-      'transport.type': 'streamable-http',
-      'transport.method': req.method,
-      'transport.url': req.url,
-      'transport.user_agent': req.headers['user-agent'] || 'unknown',
+      "transport.type": "streamable-http",
+      "transport.method": req.method,
+      "transport.url": req.url,
+      "transport.user_agent": req.headers["user-agent"] || "unknown",
     });
-    
+
     try {
       // Check for existing session ID
       const mcpSessionId = req.headers["mcp-session-id"] as string | undefined;
@@ -530,18 +550,18 @@ export async function createHttpTransport(
         const transportData = transports[mcpSessionId];
         transport = transportData.transport;
         sessionInfo = transportData.sessionInfo;
-        
+
         logger.setSessionContext(sessionInfo.sessionId);
       } else if (!mcpSessionId && req.method === "POST" && !serverShuttingDown) {
         // Create new session using session manager
         sessionInfo = createSessionFromRequest(req);
         logger.setSessionContext(sessionInfo.sessionId);
-        
+
         // Notify about session creation
         if (options.onSessionCreate) {
           options.onSessionCreate(sessionInfo.sessionId);
         }
-        
+
         // Create new transport for initialization
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
@@ -550,14 +570,14 @@ export async function createHttpTransport(
               sessionManager.removeSession(sessionInfo.sessionId);
               return;
             }
-            
+
             // Store transport with session info
             transports[mcpSessionId] = {
               transport,
               sessionInfo,
               createdAt: Date.now(),
             };
-            
+
             sessionManager.updateSession(sessionInfo.sessionId, {
               connectionId: mcpSessionId,
             });
@@ -569,17 +589,17 @@ export async function createHttpTransport(
           const mcpSid = transport.sessionId;
           if (mcpSid && transports[mcpSid]) {
             const transportData = transports[mcpSid];
-            
+
             // Clean up session from session manager
             if (transportData.sessionInfo) {
               sessionManager.removeSession(transportData.sessionInfo.sessionId);
-              
+
               // Notify about session destruction
               if (options.onSessionDestroy) {
                 options.onSessionDestroy(transportData.sessionInfo.sessionId);
               }
             }
-            
+
             delete transports[mcpSid];
           }
         };
@@ -609,29 +629,29 @@ export async function createHttpTransport(
         });
         return;
       }
-      
+
       // Handle the request with the transport
       const startTime = Date.now();
       await transport.handleRequest(req as any, res, req.body);
       const processingTime = Date.now() - startTime;
-      
+
       // Complete transport-level tracing
       if (transportTraceId) {
         logger.endOperation(transportTraceId, {
-          'transport.processing.time.ms': processingTime,
-          'transport.session.id': sessionInfo?.sessionId || 'unknown',
-          'transport.success': true,
+          "transport.processing.time.ms": processingTime,
+          "transport.session.id": sessionInfo?.sessionId || "unknown",
+          "transport.success": true,
         });
       }
     } catch (error) {
       // Complete transport-level tracing with error
       if (transportTraceId) {
         logger.endOperation(transportTraceId, {
-          'transport.success': false,
-          'transport.error.type': error instanceof Error ? error.name : 'unknown',
+          "transport.success": false,
+          "transport.error.type": error instanceof Error ? error.name : "unknown",
         });
       }
-      
+
       if (!res.headersSent) {
         res.status(500).json({
           jsonrpc: "2.0",
@@ -655,7 +675,7 @@ export async function createHttpTransport(
   });
 
   // Start HTTP server
-  const httpServer = app.listen(port, '127.0.0.1', () => {
+  const httpServer = app.listen(port, "127.0.0.1", () => {
     logger.info(`Test HTTP server running on port ${port}`, "transport");
   });
 

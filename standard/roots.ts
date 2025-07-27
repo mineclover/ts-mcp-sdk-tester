@@ -25,7 +25,7 @@ function registerListRoots(server: McpServer) {
     // For testing purposes, we'll simulate a response.
 
     // Get demo roots from separated demo data
-    const simulatedRoots: Root[] = DEMO_ROOTS.map(root => ({
+    const simulatedRoots: Root[] = DEMO_ROOTS.map((root) => ({
       ...root,
       _meta: {
         ...root._meta,

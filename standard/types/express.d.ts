@@ -18,5 +18,3 @@ declare module "express-serve-static-core" {
     auth?: AuthContext;
   }
 }
-
-export {};

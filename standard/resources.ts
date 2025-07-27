@@ -32,14 +32,14 @@ import { paginateArray } from "./pagination-utils.js";
  */
 
 export function registerResourcesEndpoints(server: McpServer) {
-  logger.logMethodEntry("registerResourcesEndpoints", { serverType: 'McpServer' }, "resources");
-  
+  logger.logMethodEntry("registerResourcesEndpoints", { serverType: "McpServer" }, "resources");
+
   registerListResources(server);
   registerListResourceTemplates(server);
   registerReadResource(server);
   registerSubscribeResource(server);
   registerUnsubscribeResource(server);
-  
+
   logger.info("All resource endpoints registered successfully", "resources");
 }
 
@@ -49,7 +49,7 @@ export function registerResourcesEndpoints(server: McpServer) {
  */
 function registerListResources(server: McpServer) {
   logger.logMethodEntry("registerListResources", undefined, "resources");
-  
+
   server.server.setRequestHandler(
     ListResourcesRequestSchema,
     async (request, extra): Promise<ListResourcesResult> => {
@@ -81,12 +81,17 @@ function registerListResources(server: McpServer) {
           },
         };
 
-        await logger.logMethodExit("resources/list", {
-          requestId: extra.requestId,
-          resourceCount: result.resources.length,
-          totalCount: result._meta?.totalCount,
-          hasMore: result._meta?.hasMore,
-        }, "resources", traceId);
+        await logger.logMethodExit(
+          "resources/list",
+          {
+            requestId: extra.requestId,
+            resourceCount: result.resources.length,
+            totalCount: result._meta?.totalCount,
+            hasMore: result._meta?.hasMore,
+          },
+          "resources",
+          traceId
+        );
 
         return result;
       } catch (error) {
@@ -157,20 +162,20 @@ function registerListResourceTemplates(server: McpServer) {
  */
 function registerReadResource(server: McpServer) {
   logger.logMethodEntry("registerReadResource", undefined, "resources");
-  
+
   server.server.setRequestHandler(
     ReadResourceRequestSchema,
     async (request, extra): Promise<ReadResourceResult> => {
       const { uri } = request.params;
-      
+
       const traceId = await logger.logEndpointEntry("resources/read", extra.requestId, {
         uri: uri,
-        uriScheme: uri.split('://')[0] || 'unknown',
+        uriScheme: uri.split("://")[0] || "unknown",
       });
 
       try {
         logger.debug(`Reading resource: ${uri}`, "resources");
-        
+
         // Get demo resource content from separated demo data
         let contents: (TextResourceContents | BlobResourceContents)[];
 
@@ -179,7 +184,7 @@ function registerReadResource(server: McpServer) {
           logger.debug(`Found resource in demo data: ${uri}`, "resources");
         } catch (error) {
           logger.debug(`Resource not in demo data, checking fallback: ${uri}`, "resources");
-          
+
           // Handle additional demo resource types not in main demo data
           if (uri.startsWith("api:///")) {
             logger.debug(`Generating API resource content for: ${uri}`, "resources");
@@ -211,14 +216,21 @@ function registerReadResource(server: McpServer) {
           },
         };
 
-        await logger.logMethodExit("resources/read", {
-          requestId: extra.requestId,
-          uri: uri,
-          contentCount: contents.length,
-          totalSize: contents.reduce((size, content) => 
-            size + ('text' in content ? content.text.length : content.blob.length), 0
-          ),
-        }, "resources", traceId);
+        await logger.logMethodExit(
+          "resources/read",
+          {
+            requestId: extra.requestId,
+            uri: uri,
+            contentCount: contents.length,
+            totalSize: contents.reduce(
+              (size, content) =>
+                size + ("text" in content ? content.text.length : content.blob.length),
+              0
+            ),
+          },
+          "resources",
+          traceId
+        );
 
         return result;
       } catch (error) {
@@ -239,42 +251,52 @@ function registerReadResource(server: McpServer) {
  */
 function registerSubscribeResource(server: McpServer) {
   logger.logMethodEntry("registerSubscribeResource", undefined, "resources");
-  
-  server.server.setRequestHandler(SubscribeRequestSchema, async (request, extra): Promise<EmptyResult> => {
-    const { uri } = request.params;
-    
-    const traceId = await logger.logEndpointEntry("resources/subscribe", extra.requestId, { uri });
 
-    try {
-      logger.info(`Client subscribing to resource: ${uri}`, "resources");
-      
-      // In a real implementation, this would register the subscription
-      // For now, just acknowledge the subscription
-      const result: EmptyResult = {
-        _meta: {
-          subscribedTo: uri,
-          subscriptionTime: new Date().toISOString(),
-          message: `Subscribed to resource updates for: ${uri}`,
-          requestId: extra.requestId,
-        },
-      };
+  server.server.setRequestHandler(
+    SubscribeRequestSchema,
+    async (request, extra): Promise<EmptyResult> => {
+      const { uri } = request.params;
 
-      await logger.logMethodExit("resources/subscribe", {
-        requestId: extra.requestId,
-        uri: uri,
-        status: "subscribed",
-      }, "resources", traceId);
+      const traceId = await logger.logEndpointEntry("resources/subscribe", extra.requestId, {
+        uri,
+      });
 
-      return result;
-    } catch (error) {
-      await logger.logServerError(
-        error instanceof Error ? error : new Error(String(error)),
-        "resources/subscribe",
-        { requestId: extra.requestId, uri }
-      );
-      throw error;
+      try {
+        logger.info(`Client subscribing to resource: ${uri}`, "resources");
+
+        // In a real implementation, this would register the subscription
+        // For now, just acknowledge the subscription
+        const result: EmptyResult = {
+          _meta: {
+            subscribedTo: uri,
+            subscriptionTime: new Date().toISOString(),
+            message: `Subscribed to resource updates for: ${uri}`,
+            requestId: extra.requestId,
+          },
+        };
+
+        await logger.logMethodExit(
+          "resources/subscribe",
+          {
+            requestId: extra.requestId,
+            uri: uri,
+            status: "subscribed",
+          },
+          "resources",
+          traceId
+        );
+
+        return result;
+      } catch (error) {
+        await logger.logServerError(
+          error instanceof Error ? error : new Error(String(error)),
+          "resources/subscribe",
+          { requestId: extra.requestId, uri }
+        );
+        throw error;
+      }
     }
-  });
+  );
 }
 
 /**
@@ -283,17 +305,19 @@ function registerSubscribeResource(server: McpServer) {
  */
 function registerUnsubscribeResource(server: McpServer) {
   logger.logMethodEntry("registerUnsubscribeResource", undefined, "resources");
-  
+
   server.server.setRequestHandler(
     UnsubscribeRequestSchema,
     async (request, extra): Promise<EmptyResult> => {
       const { uri } = request.params;
-      
-      const traceId = await logger.logEndpointEntry("resources/unsubscribe", extra.requestId, { uri });
+
+      const traceId = await logger.logEndpointEntry("resources/unsubscribe", extra.requestId, {
+        uri,
+      });
 
       try {
         logger.info(`Client unsubscribing from resource: ${uri}`, "resources");
-        
+
         // In a real implementation, this would remove the subscription
         // For now, just acknowledge the unsubscription
         const result: EmptyResult = {
@@ -305,11 +329,16 @@ function registerUnsubscribeResource(server: McpServer) {
           },
         };
 
-        await logger.logMethodExit("resources/unsubscribe", {
-          requestId: extra.requestId,
-          uri: uri,
-          status: "unsubscribed",
-        }, "resources", traceId);
+        await logger.logMethodExit(
+          "resources/unsubscribe",
+          {
+            requestId: extra.requestId,
+            uri: uri,
+            status: "unsubscribed",
+          },
+          "resources",
+          traceId
+        );
 
         return result;
       } catch (error) {

@@ -1,6 +1,6 @@
 /**
  * Demo Prompt Data
- * 
+ *
  * Sample prompts for testing and demonstration purposes.
  * This file contains demo data that can be easily removed or modified.
  */
@@ -66,7 +66,10 @@ export const DEMO_PROMPTS: Prompt[] = [
   },
 ];
 
-export function getDemoPromptMessages(name: string, args: Record<string, string> = {}): PromptMessage[] {
+export function getDemoPromptMessages(
+  name: string,
+  args: Record<string, string> = {}
+): PromptMessage[] {
   switch (name) {
     case "greeting":
       return [
@@ -103,7 +106,7 @@ export function getDemoPromptMessages(name: string, args: Record<string, string>
         },
       ];
 
-    case "summarize":
+    case "summarize": {
       const length = args.length || "medium";
       return [
         {
@@ -114,6 +117,7 @@ export function getDemoPromptMessages(name: string, args: Record<string, string>
           } as ContentBlock,
         },
       ];
+    }
 
     default:
       throw new Error(`Prompt not found: ${name}`);

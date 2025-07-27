@@ -1,6 +1,6 @@
 /**
  * Authenticated Request Types
- * 
+ *
  * Provides type-safe request interfaces that guarantee authentication context
  */
 
@@ -34,8 +34,8 @@ export function assertAuthenticated(req: Request): asserts req is AuthenticatedR
 /**
  * Type guard for authenticated requests with specific auth method
  */
-export function hasAuthMethod<T extends AuthContext['authMethod']>(
-  req: Request, 
+export function hasAuthMethod<T extends AuthContext["authMethod"]>(
+  req: Request,
   method: T
 ): req is AuthenticatedRequest & { auth: AuthContext & { authMethod: T } } {
   return req.auth?.authMethod === method;
@@ -44,8 +44,8 @@ export function hasAuthMethod<T extends AuthContext['authMethod']>(
 /**
  * Type guard for successfully authenticated requests (not just processed)
  */
-export function isAuthenticated(req: Request): req is AuthenticatedRequest & { 
-  auth: AuthContext & { isAuthenticated: true } 
+export function isAuthenticated(req: Request): req is AuthenticatedRequest & {
+  auth: AuthContext & { isAuthenticated: true };
 } {
   return req.auth?.isAuthenticated === true;
 }

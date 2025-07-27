@@ -28,7 +28,7 @@ export { parseArguments, setupTransport, type TransportOptions } from "./transpo
 export function registerStandardEndpoints(server: McpServer) {
   // Initialize lifecycle management first
   registerLifecycleManagement(server);
-  
+
   // Core protocol endpoints
   registerPingEndpoint(server);
   registerAuthEndpoints(server);

@@ -46,17 +46,23 @@ function registerInitialize(server: McpServer) {
       } else {
         // Use the latest version we support
         negotiatedVersion = LATEST_PROTOCOL_VERSION;
-        logger.warning(`Unsupported protocol version ${protocolVersion}, using ${negotiatedVersion}`, "auth");
+        logger.warning(
+          `Unsupported protocol version ${protocolVersion}, using ${negotiatedVersion}`,
+          "auth"
+        );
       }
-      
+
       // Log client information for security monitoring
-      logger.info({
-        message: "Client initialization",
-        clientName: clientInfo?.name,
-        clientVersion: clientInfo?.version,
-        protocolVersion: negotiatedVersion,
-        hasCapabilities: !!capabilities,
-      }, "auth");
+      logger.info(
+        {
+          message: "Client initialization",
+          clientName: clientInfo?.name,
+          clientVersion: clientInfo?.version,
+          protocolVersion: negotiatedVersion,
+          hasCapabilities: !!capabilities,
+        },
+        "auth"
+      );
 
       // Get server capabilities from configuration
       const serverCapabilities: ServerCapabilities = AUTH_CONFIG.capabilities;
@@ -85,11 +91,15 @@ function registerInitialize(server: McpServer) {
       // Mark initialization phase as complete
       lifecycleManager.markInitialized();
 
-      await logger.logMethodExit("initialize", { 
-        protocolVersion: negotiatedVersion,
-        lifecycleState: lifecycleManager.getState(),
-      }, "auth");
-      
+      await logger.logMethodExit(
+        "initialize",
+        {
+          protocolVersion: negotiatedVersion,
+          lifecycleState: lifecycleManager.getState(),
+        },
+        "auth"
+      );
+
       return result;
     }
   );

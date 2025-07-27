@@ -3,17 +3,17 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import express from "express";
 import { createHttpTransport } from "../standard/transports.js";
-import { LifecycleManager, LifecycleState } from "../standard/lifecycle.js";
-import { 
-  createTestServer, 
-  createTestLifecycleManager, 
+import { type LifecycleManager, LifecycleState } from "../standard/lifecycle.js";
+import {
+  createTestServer,
+  createTestLifecycleManager,
   getRandomTestPort,
-  MOCK_ERRORS 
+  MOCK_ERRORS,
 } from "./test-utils.js";
 
 /**
  * Data Flow Validation Tests
- * 
+ *
  * Tests the complete data flow architecture documented in architecture-flow.md
  * covering all lifecycle states, transport types, and error scenarios.
  */
@@ -67,30 +67,30 @@ describe("Data Flow Validation", () => {
   describe("Scenario 2: Shutdown During Initialization", () => {
     test("Process Start → INITIALIZING → Shutdown Signal → SHUTTING_DOWN → SHUTDOWN", async () => {
       const { lifecycleManager: manager } = createTestLifecycleManager(server);
-      
+
       // Start initialization
       manager.initialize(server);
       expect(manager.currentState).toBe(LifecycleState.INITIALIZING);
 
       // Trigger shutdown before completion
       const shutdownPromise = manager.shutdown();
-      
+
       // Should move to shutting_down
       expect(manager.currentState).toBe(LifecycleState.SHUTTING_DOWN);
-      
+
       await shutdownPromise;
       expect(manager.currentState).toBe(LifecycleState.SHUTDOWN);
     });
 
     test("Initialize notification should be ignored during shutdown", async () => {
       const { lifecycleManager: manager } = createTestLifecycleManager(server);
-      
+
       manager.initialize(server);
       const shutdownPromise = manager.shutdown();
-      
+
       // Try to mark initialized after shutdown started
       manager.markInitialized();
-      
+
       await shutdownPromise;
       expect(manager.currentState).toBe(LifecycleState.SHUTDOWN);
     });
@@ -105,17 +105,14 @@ describe("Data Flow Validation", () => {
       const { httpServer: server } = await createHttpTransport(
         app,
         testPort,
-        new McpServer(
-          { name: "test", version: "1.0.0" },
-          { capabilities: {} }
-        ),
+        new McpServer({ name: "test", version: "1.0.0" }, { capabilities: {} }),
         {
           onSessionCreate: (sessionId: string) => {
             sessions.set(sessionId, { created: Date.now() });
           },
           onSessionDestroy: (sessionId: string) => {
             sessions.delete(sessionId);
-          }
+          },
         }
       );
 
@@ -134,9 +131,9 @@ describe("Data Flow Validation", () => {
 
       // Close server (should cleanup sessions)
       server.close();
-      
+
       // Wait for cleanup
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
     test("Shutdown should prevent new session creation", async () => {
@@ -146,10 +143,10 @@ describe("Data Flow Validation", () => {
 
       // Start shutdown
       const shutdownPromise = manager.shutdown();
-      
+
       // Should not be operational during shutdown
       expect(manager.isOperational()).toBe(false);
-      
+
       await shutdownPromise;
     });
   });
@@ -157,7 +154,7 @@ describe("Data Flow Validation", () => {
   describe("Scenario 4: Error Recovery", () => {
     test("Request → Auth Error → Rate Limit Error → MCP Error → Graceful Response", async () => {
       const errors: string[] = [];
-      
+
       // Use standardized mock errors
       const { auth: mockAuthError, rateLimit: mockRateLimitError, mcp: mockMcpError } = MOCK_ERRORS;
 
@@ -194,16 +191,16 @@ describe("Data Flow Validation", () => {
 
       // Simulate STDIO transport creation
       manager.initialize(testServerLocal);
-      
+
       // Register shutdown handler (simulating transport connection)
       manager.onShutdown(async () => {
         // Cleanup stdio resources
       });
 
       expect(manager.currentState).toBe(LifecycleState.INITIALIZING);
-      
+
       manager.markInitialized();
-      
+
       expect(manager.currentState).toBe(LifecycleState.INITIALIZED);
       expect(manager.isOperational()).toBe(false); // Need client notification to go to operating
 
@@ -230,8 +227,6 @@ describe("Data Flow Validation", () => {
 
   describe("MCP Protocol Flow", () => {
     test("Initialize protocol negotiation", async () => {
-
-
       // Test protocol version validation
       const initRequest = {
         jsonrpc: "2.0" as const,
@@ -242,9 +237,9 @@ describe("Data Flow Validation", () => {
           capabilities: {},
           clientInfo: {
             name: "test-client",
-            version: "1.0.0"
-          }
-        }
+            version: "1.0.0",
+          },
+        },
       };
 
       // This would normally be handled by the server's request handler
@@ -264,7 +259,7 @@ describe("Data Flow Validation", () => {
       const pingRequest = {
         jsonrpc: "2.0" as const,
         id: 1,
-        method: "ping" as const
+        method: "ping" as const,
       };
 
       // Verify ping request structure
@@ -278,7 +273,7 @@ describe("Data Flow Validation", () => {
       const states: string[] = [];
 
       // Track state changes
-      
+
       // Start flow
       expect(manager.currentState).toBe(LifecycleState.UNINITIALIZED);
       states.push(manager.currentState);
@@ -294,9 +289,9 @@ describe("Data Flow Validation", () => {
 
       expect(states).toEqual([
         LifecycleState.UNINITIALIZED,
-        LifecycleState.INITIALIZING, 
+        LifecycleState.INITIALIZING,
         LifecycleState.INITIALIZED,
-        LifecycleState.SHUTDOWN
+        LifecycleState.SHUTDOWN,
       ]);
     });
 
@@ -309,7 +304,7 @@ describe("Data Flow Validation", () => {
 
       manager.initialize(server);
       expect(manager.currentState).toBe(LifecycleState.INITIALIZING);
-      
+
       // Multiple initialization calls should work but not change state
       manager.initialize(server);
       expect(manager.currentState).toBe(LifecycleState.INITIALIZING);
@@ -331,7 +326,7 @@ describe("Data Flow Validation", () => {
 
       // Shutdown should cleanup all handlers
       await manager.shutdown();
-      
+
       // Memory should be released (handlers cleared)
       expect(manager.currentState).toBe(LifecycleState.SHUTDOWN);
     });
@@ -343,13 +338,13 @@ describe("Data Flow Validation", () => {
 
       // Measure state check performance
       const start = performance.now();
-      
+
       for (let i = 0; i < 1000; i++) {
         manager.isOperational();
       }
-      
+
       const duration = performance.now() - start;
-      
+
       // Should be very fast (< 1ms for 1000 checks)
       expect(duration).toBeLessThan(1);
 

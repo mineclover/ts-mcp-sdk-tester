@@ -1,17 +1,17 @@
 /**
  * Demo Elicitation Data
- * 
+ *
  * Sample elicitation responses for testing and demonstration purposes.
  * This file contains demo data that can be easily removed or modified.
  */
 
 interface SchemaProperty {
   type?: string;
-  enum?: any[];
+  enum?: unknown[];
   format?: string;
   minimum?: number;
   maximum?: number;
-  default?: any;
+  default?: unknown;
 }
 
 interface RequestedSchema {
@@ -19,7 +19,9 @@ interface RequestedSchema {
   required?: string[];
 }
 
-export function generateDemoElicitationContent(requestedSchema: RequestedSchema): { [key: string]: string | number | boolean } {
+export function generateDemoElicitationContent(requestedSchema: RequestedSchema): {
+  [key: string]: string | number | boolean;
+} {
   const simulatedContent: { [key: string]: string | number | boolean } = {};
 
   if (requestedSchema.properties) {
@@ -52,7 +54,7 @@ export function generateDemoElicitationContent(requestedSchema: RequestedSchema)
         } else if (schema.type === "number" || schema.type === "integer") {
           const min = typeof schema.minimum === "number" ? schema.minimum : 0;
           const max = typeof schema.maximum === "number" ? schema.maximum : 100;
-          
+
           if (schema.type === "integer") {
             simulatedContent[key] = Math.floor(Math.random() * (max - min + 1)) + min;
           } else {

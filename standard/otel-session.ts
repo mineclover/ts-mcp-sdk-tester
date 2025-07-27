@@ -1,6 +1,6 @@
 /**
  * OpenTelemetry Session Integration for MCP Logger
- * 
+ *
  * Provides basic session tracking and trace context for existing logger
  * without requiring full OTel SDK installation.
  */
@@ -12,7 +12,7 @@ export interface SessionInfo {
   sessionId: string;
   clientId?: string;
   connectionId: string;
-  transportType: 'stdio' | 'http' | 'websocket';
+  transportType: "stdio" | "http" | "websocket";
   startTime: number;
   userAgent?: string;
   remoteAddress?: string;
@@ -39,7 +39,7 @@ const activeTraces = new Map<string, SimpleTraceContext>();
  */
 export class SessionManager {
   private static instance: SessionManager;
-  
+
   static getInstance(): SessionManager {
     if (!SessionManager.instance) {
       SessionManager.instance = new SessionManager();
@@ -52,14 +52,14 @@ export class SessionManager {
    */
   createSession(options: {
     clientId?: string;
-    transportType: 'stdio' | 'http' | 'websocket';
+    transportType: "stdio" | "http" | "websocket";
     userAgent?: string;
     remoteAddress?: string;
     capabilities?: string[];
   }): SessionInfo {
     const sessionId = this.generateSessionId();
     const connectionId = this.generateConnectionId();
-    
+
     const session: SessionInfo = {
       sessionId,
       clientId: options.clientId,
@@ -132,7 +132,7 @@ export class SessionManager {
  */
 export class TraceManager {
   private static instance: TraceManager;
-  
+
   static getInstance(): TraceManager {
     if (!TraceManager.instance) {
       TraceManager.instance = new TraceManager();
@@ -151,7 +151,7 @@ export class TraceManager {
   }): SimpleTraceContext {
     const traceId = this.generateTraceId();
     const spanId = this.generateSpanId();
-    
+
     const trace: SimpleTraceContext = {
       traceId,
       spanId,
@@ -160,8 +160,8 @@ export class TraceManager {
       operationName: options.operationName,
       startTime: Date.now(),
       attributes: {
-        'mcp.operation': options.operationName,
-        'mcp.session.id': options.sessionId,
+        "mcp.operation": options.operationName,
+        "mcp.session.id": options.sessionId,
         ...options.attributes,
       },
     };
@@ -179,8 +179,8 @@ export class TraceManager {
       if (attributes) {
         Object.assign(trace.attributes, attributes);
       }
-      trace.attributes['mcp.duration.ms'] = Date.now() - trace.startTime;
-      
+      trace.attributes["mcp.duration.ms"] = Date.now() - trace.startTime;
+
       // In a real implementation, this would export to OTel collector
       // For now, we just keep it for debugging
       activeTraces.delete(traceId);
@@ -198,16 +198,15 @@ export class TraceManager {
    * Get all traces for a session
    */
   getSessionTraces(sessionId: string): SimpleTraceContext[] {
-    return Array.from(activeTraces.values())
-      .filter(trace => trace.sessionId === sessionId);
+    return Array.from(activeTraces.values()).filter((trace) => trace.sessionId === sessionId);
   }
 
   /**
    * Generate trace ID (128-bit in hex)
    */
   private generateTraceId(): string {
-    const high = Math.random().toString(16).substring(2, 18).padStart(16, '0');
-    const low = Math.random().toString(16).substring(2, 18).padStart(16, '0');
+    const high = Math.random().toString(16).substring(2, 18).padStart(16, "0");
+    const low = Math.random().toString(16).substring(2, 18).padStart(16, "0");
     return high + low;
   }
 
@@ -215,7 +214,7 @@ export class TraceManager {
    * Generate span ID (64-bit in hex)
    */
   private generateSpanId(): string {
-    return Math.random().toString(16).substring(2, 18).padStart(16, '0');
+    return Math.random().toString(16).substring(2, 18).padStart(16, "0");
   }
 }
 
@@ -270,7 +269,10 @@ export class SessionAwareLogger {
   /**
    * Start a new operation trace
    */
-  startOperation(operationName: string, attributes?: Record<string, string | number | boolean>): string | null {
+  startOperation(
+    operationName: string,
+    attributes?: Record<string, string | number | boolean>
+  ): string | null {
     if (!this.currentSessionId) {
       return null;
     }
@@ -298,9 +300,9 @@ export class SessionAwareLogger {
   enhanceLogData(data: unknown, logger: string): SessionAwareLogData {
     let enhancedData: SessionAwareLogData;
 
-    if (typeof data === 'string') {
+    if (typeof data === "string") {
       enhancedData = { message: data };
-    } else if (typeof data === 'object' && data !== null) {
+    } else if (typeof data === "object" && data !== null) {
       enhancedData = { ...data } as SessionAwareLogData;
     } else {
       enhancedData = { message: String(data) };
@@ -336,13 +338,13 @@ export class SessionAwareLogger {
     enhancedData._otel = {
       timestamp: Date.now(),
       resource: {
-        'service.name': 'mcp-server',
-        'service.version': '1.0.0',
-        'mcp.logger.name': logger,
+        "service.name": "mcp-server",
+        "service.version": "1.0.0",
+        "mcp.logger.name": logger,
       },
       attributes: {
-        'mcp.logger.category': logger,
-        'mcp.log.timestamp': new Date().toISOString(),
+        "mcp.logger.category": logger,
+        "mcp.log.timestamp": new Date().toISOString(),
       },
     };
 
@@ -364,14 +366,14 @@ export class SessionAwareLogger {
   }): Record<string, string | number | boolean> {
     const attributes: Record<string, string | number | boolean> = {};
 
-    if (options.endpoint) attributes['mcp.endpoint'] = options.endpoint;
-    if (options.method) attributes['mcp.method'] = options.method;
-    if (options.requestId) attributes['mcp.request.id'] = String(options.requestId);
-    if (options.resourceUri) attributes['mcp.resource.uri'] = options.resourceUri;
-    if (options.toolName) attributes['mcp.tool.name'] = options.toolName;
-    if (options.promptName) attributes['mcp.prompt.name'] = options.promptName;
-    if (options.hasMore !== undefined) attributes['mcp.response.has_more'] = options.hasMore;
-    if (options.cursor) attributes['mcp.request.cursor'] = options.cursor;
+    if (options.endpoint) attributes["mcp.endpoint"] = options.endpoint;
+    if (options.method) attributes["mcp.method"] = options.method;
+    if (options.requestId) attributes["mcp.request.id"] = String(options.requestId);
+    if (options.resourceUri) attributes["mcp.resource.uri"] = options.resourceUri;
+    if (options.toolName) attributes["mcp.tool.name"] = options.toolName;
+    if (options.promptName) attributes["mcp.prompt.name"] = options.promptName;
+    if (options.hasMore !== undefined) attributes["mcp.response.has_more"] = options.hasMore;
+    if (options.cursor) attributes["mcp.request.cursor"] = options.cursor;
 
     return attributes;
   }
@@ -400,13 +402,13 @@ export const sessionLogger = new SessionAwareLogger();
  */
 export function createSessionFromRequest(req: any): SessionInfo {
   const sessionManager = SessionManager.getInstance();
-  
+
   return sessionManager.createSession({
-    clientId: req.headers['x-client-id'] || req.headers['user-agent']?.substring(0, 50),
-    transportType: 'http',
-    userAgent: req.headers['user-agent'],
+    clientId: req.headers["x-client-id"] || req.headers["user-agent"]?.substring(0, 50),
+    transportType: "http",
+    userAgent: req.headers["user-agent"],
     remoteAddress: req.ip || req.connection.remoteAddress,
-    capabilities: req.headers['x-mcp-capabilities']?.split(',') || [],
+    capabilities: req.headers["x-mcp-capabilities"]?.split(",") || [],
   });
 }
 
@@ -419,10 +421,10 @@ export function extractTraceContextFromHeaders(headers: Record<string, string>):
   parentSpanId?: string;
 } {
   // Support for W3C Trace Context standard
-  const traceparent = headers['traceparent'] || headers['x-trace-id'];
-  
-  if (traceparent && typeof traceparent === 'string') {
-    const parts = traceparent.split('-');
+  const traceparent = headers["traceparent"] || headers["x-trace-id"];
+
+  if (traceparent && typeof traceparent === "string") {
+    const parts = traceparent.split("-");
     if (parts.length >= 3) {
       return {
         traceId: parts[1],
@@ -443,5 +445,5 @@ export function injectTraceContextIntoHeaders(
   context: { traceId: string; spanId: string }
 ): void {
   // W3C Trace Context format: version-traceId-spanId-flags
-  headers['traceparent'] = `00-${context.traceId}-${context.spanId}-01`;
+  headers["traceparent"] = `00-${context.traceId}-${context.spanId}-01`;
 }

@@ -1,6 +1,6 @@
 /**
  * Demo Completion Data
- * 
+ *
  * Sample completion suggestions for testing and demonstration purposes.
  * This file contains demo data that can be easily removed or modified.
  */
@@ -14,12 +14,7 @@ export const DEMO_PROMPT_COMPLETIONS: Record<string, string[]> = {
 };
 
 export const DEMO_RESOURCE_COMPLETIONS: Record<string, string[]> = {
-  path: [
-    "/home/user/documents",
-    "/tmp/temp-file.txt",
-    "/var/log/app.log",
-    "/etc/config.json",
-  ],
+  path: ["/home/user/documents", "/tmp/temp-file.txt", "/var/log/app.log", "/etc/config.json"],
   endpoint: ["users", "posts", "comments", "products", "orders"],
   id: ["1", "2", "3", "123", "456"],
   default: ["resource1", "resource2", "resource3"],

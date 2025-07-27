@@ -3,22 +3,18 @@
  * Main entry point for SigNoz observability
  */
 
-import { trace, metrics, SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import type { Span, Tracer, Meter } from '@opentelemetry/api';
-import { getMcpOTelProvider } from '../otel/provider.js';
-import type { McpOTelProvider, McpTracer } from '../otel/types.js';
-import { 
-  MCP_SPAN_ATTRIBUTES,
-  MCP_SPAN_NAMES,
-  MCP_METRIC_NAMES,
-} from '../otel/types.js';
-import { 
+import { trace, metrics, SpanStatusCode, SpanKind } from "@opentelemetry/api";
+import type { Span, Tracer, Meter } from "@opentelemetry/api";
+import { getMcpOTelProvider } from "../otel/provider.js";
+import type { McpOTelProvider, McpTracer } from "../otel/types.js";
+import { MCP_SPAN_ATTRIBUTES, MCP_SPAN_NAMES, MCP_METRIC_NAMES } from "../otel/types.js";
+import {
   createSigNozConfig,
   getSigNozConfigFromEnv,
   validateSigNozConfig,
   type SigNozConfig,
-} from './config.js';
-import { logger } from '../../standard/logger.js';
+} from "./config.js";
+import { logger } from "../../standard/logger.js";
 
 /**
  * SigNoz Integration Manager
@@ -50,54 +46,53 @@ export class SigNozIntegration {
    */
   async initialize(config?: SigNozConfig): Promise<void> {
     if (this.initialized) {
-      logger.warning('SigNoz integration already initialized', 'signoz');
+      logger.warning("SigNoz integration already initialized", "signoz");
       return;
     }
 
     try {
       // Use provided config or get from environment
       this.config = config || getSigNozConfigFromEnv();
-      
+
       // Validate configuration
       const validation = validateSigNozConfig(this.config);
       if (!validation.valid) {
-        throw new Error(`Invalid SigNoz configuration: ${validation.errors.join(', ')}`);
+        throw new Error(`Invalid SigNoz configuration: ${validation.errors.join(", ")}`);
       }
-      
+
       // Create OTel configuration
       const otelConfig = createSigNozConfig(this.config);
-      
+
       // Initialize OTel provider
       await this.provider.initialize(otelConfig);
-      
+
       // Get tracer and meter
-      this.tracer = this.provider.getTracer(
-        this.config.serviceName,
-        this.config.serviceVersion
-      );
-      
-      this.meter = this.provider.getMeter(
-        this.config.serviceName,
-        this.config.serviceVersion
-      );
-      
+      this.tracer = this.provider.getTracer(this.config.serviceName, this.config.serviceVersion);
+
+      this.meter = this.provider.getMeter(this.config.serviceName, this.config.serviceVersion);
+
       // Set up metrics
       this.setupMetrics();
-      
+
       this.initialized = true;
-      logger.info({
-        message: 'SigNoz integration initialized successfully',
-        endpoint: this.config.endpoint,
-        serviceName: this.config.serviceName,
-        serviceVersion: this.config.serviceVersion,
-        environment: this.config.environment,
-      }, 'signoz');
-      
+      logger.info(
+        {
+          message: "SigNoz integration initialized successfully",
+          endpoint: this.config.endpoint,
+          serviceName: this.config.serviceName,
+          serviceVersion: this.config.serviceVersion,
+          environment: this.config.environment,
+        },
+        "signoz"
+      );
     } catch (error) {
-      logger.error({
-        message: 'Failed to initialize SigNoz integration',
-        error: error instanceof Error ? error.message : String(error),
-      }, 'signoz');
+      logger.error(
+        {
+          message: "Failed to initialize SigNoz integration",
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "signoz"
+      );
       throw error;
     }
   }
@@ -113,12 +108,15 @@ export class SigNozIntegration {
     try {
       await this.provider.shutdown();
       this.initialized = false;
-      logger.info('SigNoz integration shut down successfully', 'signoz');
+      logger.info("SigNoz integration shut down successfully", "signoz");
     } catch (error) {
-      logger.error({
-        message: 'Error shutting down SigNoz integration',
-        error: error instanceof Error ? error.message : String(error),
-      }, 'signoz');
+      logger.error(
+        {
+          message: "Error shutting down SigNoz integration",
+          error: error instanceof Error ? error.message : String(error),
+        },
+        "signoz"
+      );
       throw error;
     }
   }
@@ -147,10 +145,7 @@ export class SigNozIntegration {
   /**
    * Start a new span for MCP operation
    */
-  startMcpSpan(
-    operation: string,
-    attributes?: Record<string, any>
-  ): Span | undefined {
+  startMcpSpan(operation: string, attributes?: Record<string, any>): Span | undefined {
     if (!this.tracer) {
       return undefined;
     }
@@ -209,7 +204,7 @@ export class SigNozIntegration {
    */
   recordMcpRequest(
     method: string,
-    status: 'success' | 'error',
+    status: "success" | "error",
     duration: number,
     attributes?: Record<string, any>
   ): void {
@@ -219,9 +214,9 @@ export class SigNozIntegration {
 
     // Request counter
     const counter = this.meter.createCounter(MCP_METRIC_NAMES.REQUEST_COUNT, {
-      description: 'Total number of MCP requests',
+      description: "Total number of MCP requests",
     });
-    
+
     counter.add(1, {
       method,
       status,
@@ -230,10 +225,10 @@ export class SigNozIntegration {
 
     // Request duration histogram
     const histogram = this.meter.createHistogram(MCP_METRIC_NAMES.REQUEST_DURATION, {
-      description: 'MCP request duration in milliseconds',
-      unit: 'ms',
+      description: "MCP request duration in milliseconds",
+      unit: "ms",
     });
-    
+
     histogram.record(duration, {
       method,
       status,
@@ -244,20 +239,16 @@ export class SigNozIntegration {
   /**
    * Record tool execution
    */
-  recordToolExecution(
-    toolName: string,
-    status: 'success' | 'error',
-    duration: number
-  ): void {
+  recordToolExecution(toolName: string, status: "success" | "error", duration: number): void {
     if (!this.meter) {
       return;
     }
 
     // Tool execution counter
     const counter = this.meter.createCounter(MCP_METRIC_NAMES.TOOL_EXECUTION_COUNT, {
-      description: 'Number of tool executions',
+      description: "Number of tool executions",
     });
-    
+
     counter.add(1, {
       tool_name: toolName,
       status,
@@ -265,10 +256,10 @@ export class SigNozIntegration {
 
     // Tool execution duration
     const histogram = this.meter.createHistogram(MCP_METRIC_NAMES.TOOL_EXECUTION_DURATION, {
-      description: 'Tool execution duration in milliseconds',
-      unit: 'ms',
+      description: "Tool execution duration in milliseconds",
+      unit: "ms",
     });
-    
+
     histogram.record(duration, {
       tool_name: toolName,
       status,
@@ -279,7 +270,7 @@ export class SigNozIntegration {
    * Record session metrics
    */
   recordSessionMetrics(
-    action: 'created' | 'terminated',
+    action: "created" | "terminated",
     transportType: string,
     duration?: number
   ): void {
@@ -287,48 +278,47 @@ export class SigNozIntegration {
       return;
     }
 
-    if (action === 'created') {
+    if (action === "created") {
       const counter = this.meter.createCounter(MCP_METRIC_NAMES.SESSION_CREATED, {
-        description: 'Number of sessions created',
+        description: "Number of sessions created",
       });
-      
+
       counter.add(1, {
         transport_type: transportType,
       });
-      
+
       // Update active sessions gauge
       const upDownCounter = this.meter.createUpDownCounter(MCP_METRIC_NAMES.SESSION_ACTIVE, {
-        description: 'Number of active sessions',
+        description: "Number of active sessions",
       });
-      
+
       upDownCounter.add(1, {
         transport_type: transportType,
       });
-      
-    } else if (action === 'terminated' && duration !== undefined) {
+    } else if (action === "terminated" && duration !== undefined) {
       const counter = this.meter.createCounter(MCP_METRIC_NAMES.SESSION_TERMINATED, {
-        description: 'Number of sessions terminated',
+        description: "Number of sessions terminated",
       });
-      
+
       counter.add(1, {
         transport_type: transportType,
       });
-      
+
       // Update active sessions gauge
       const upDownCounter = this.meter.createUpDownCounter(MCP_METRIC_NAMES.SESSION_ACTIVE, {
-        description: 'Number of active sessions',
+        description: "Number of active sessions",
       });
-      
+
       upDownCounter.add(-1, {
         transport_type: transportType,
       });
-      
+
       // Record session duration
       const histogram = this.meter.createHistogram(MCP_METRIC_NAMES.SESSION_DURATION, {
-        description: 'Session duration in milliseconds',
-        unit: 'ms',
+        description: "Session duration in milliseconds",
+        unit: "ms",
       });
-      
+
       histogram.record(duration, {
         transport_type: transportType,
       });
@@ -338,23 +328,19 @@ export class SigNozIntegration {
   /**
    * Record error
    */
-  recordError(
-    errorType: string,
-    errorCode: number,
-    method?: string
-  ): void {
+  recordError(errorType: string, errorCode: number, method?: string): void {
     if (!this.meter) {
       return;
     }
 
     const counter = this.meter.createCounter(MCP_METRIC_NAMES.ERROR_COUNT, {
-      description: 'Number of errors',
+      description: "Number of errors",
     });
-    
+
     counter.add(1, {
       error_type: errorType,
       error_code: errorCode,
-      method: method || 'unknown',
+      method: method || "unknown",
     });
   }
 
@@ -367,12 +353,16 @@ export class SigNozIntegration {
     }
 
     // Observable gauge for active spans (if we track them)
-    this.meter.createObservableGauge(MCP_METRIC_NAMES.ACTIVE_SPANS, {
-      description: 'Number of active spans',
-    }, (result) => {
-      // This would need to be tracked elsewhere
-      result.observe(0, { type: 'manual' });
-    });
+    this.meter.createObservableGauge(
+      MCP_METRIC_NAMES.ACTIVE_SPANS,
+      {
+        description: "Number of active spans",
+      },
+      (result) => {
+        // This would need to be tracked elsewhere
+        result.observe(0, { type: "manual" });
+      }
+    );
   }
 }
 
@@ -399,15 +389,15 @@ export function sigNozHttpMiddleware() {
         span.setAttributes({
           [MCP_SPAN_ATTRIBUTES.HTTP_METHOD]: req.method,
           [MCP_SPAN_ATTRIBUTES.HTTP_URL]: req.url,
-          [MCP_SPAN_ATTRIBUTES.HTTP_USER_AGENT]: req.headers['user-agent'] || 'unknown',
+          [MCP_SPAN_ATTRIBUTES.HTTP_USER_AGENT]: req.headers["user-agent"] || "unknown",
           [MCP_SPAN_ATTRIBUTES.CLIENT_ADDRESS]: req.ip || req.connection?.remoteAddress,
         });
 
         // Wrap response end to capture status
         const originalEnd = res.end;
-        res.end = function(...args: any[]) {
+        res.end = (...args: any[]) => {
           const duration = Date.now() - startTime;
-          
+
           // Add response attributes
           span.setAttributes({
             [MCP_SPAN_ATTRIBUTES.HTTP_STATUS_CODE]: res.statusCode,
@@ -417,7 +407,7 @@ export function sigNozHttpMiddleware() {
           // Record metrics
           signozInstance.recordMcpRequest(
             req.path,
-            res.statusCode >= 400 ? 'error' : 'success',
+            res.statusCode >= 400 ? "error" : "success",
             duration,
             {
               http_method: req.method,
@@ -431,17 +421,17 @@ export function sigNozHttpMiddleware() {
 
         // Continue with request
         next();
-        
+
         // Only add finish listener if res.on exists (real response object)
-        if (typeof res.on === 'function') {
-          res.on('finish', () => {
+        if (typeof res.on === "function") {
+          res.on("finish", () => {
             // Request finished
           });
         }
       },
       {
-        'http.route': req.route?.path || req.path,
-        'http.target': req.originalUrl || req.url,
+        "http.route": req.route?.path || req.path,
+        "http.target": req.originalUrl || req.url,
       }
     );
   };

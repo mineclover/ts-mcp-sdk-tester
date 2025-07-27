@@ -12,7 +12,7 @@ import { logger } from "./logger.js";
  */
 
 export function registerSamplingEndpoints(server: McpServer) {
-  logger.logMethodEntry("registerSamplingEndpoints", { serverType: 'McpServer' }, "sampling");
+  logger.logMethodEntry("registerSamplingEndpoints", { serverType: "McpServer" }, "sampling");
   registerCreateMessage(server);
   logger.info("Sampling endpoints registered successfully", "sampling");
 }
@@ -23,13 +23,13 @@ export function registerSamplingEndpoints(server: McpServer) {
  */
 function registerCreateMessage(server: McpServer) {
   logger.logMethodEntry("registerCreateMessage", undefined, "sampling");
-  
+
   server.server.setRequestHandler(
     CreateMessageRequestSchema,
     async (request, extra): Promise<CreateMessageResult> => {
       const { messages, systemPrompt, modelPreferences, temperature, maxTokens, includeContext } =
         request.params;
-        
+
       const traceId = await logger.logEndpointEntry("sampling/createMessage", extra.requestId, {
         messageCount: messages.length,
         hasSystemPrompt: !!systemPrompt,
@@ -76,13 +76,18 @@ function registerCreateMessage(server: McpServer) {
         },
       };
 
-      await logger.logMethodExit("sampling/createMessage", {
-        requestId: extra.requestId,
-        model: modelName,
-        responseLength: responseText.length,
-        messageCount: messages.length,
-        success: true,
-      }, "sampling", traceId);
+      await logger.logMethodExit(
+        "sampling/createMessage",
+        {
+          requestId: extra.requestId,
+          model: modelName,
+          responseLength: responseText.length,
+          messageCount: messages.length,
+          success: true,
+        },
+        "sampling",
+        traceId
+      );
 
       return result;
     }

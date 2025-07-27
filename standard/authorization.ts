@@ -7,7 +7,7 @@ import { assertAuthenticated } from "./types/authenticated-request.js";
 
 /**
  * MCP Authorization and Security Middleware
- * 
+ *
  * Implements optional authorization features for HTTP transport as per MCP spec.
  * Note: Authorization is OPTIONAL for MCP implementations.
  * For STDIO transport, no authorization is needed.
@@ -17,39 +17,39 @@ export interface AuthContext {
   isAuthenticated: boolean;
   clientId?: string;
   capabilities?: string[];
-  authMethod?: 'none' | 'api-key' | 'oauth' | 'basic';
+  authMethod?: "none" | "api-key" | "oauth" | "basic";
   metadata?: Record<string, unknown>;
 }
 
 /**
  * Simple API key authentication middleware
  * For development and testing purposes
- * 
+ *
  * After this middleware, req.auth is guaranteed to exist
  */
 export function createAPIKeyAuth(validKeys: Set<string>) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const apiKey = req.headers['x-api-key'] as string;
-    
+    const apiKey = req.headers["x-api-key"] as string;
+
     if (!apiKey) {
       // Allow unauthenticated access for MCP Inspector and development
       req.auth = {
         isAuthenticated: false,
-        authMethod: 'none',
+        authMethod: "none",
       };
-      
+
       logger.debug("Unauthenticated request allowed", "auth");
       return next();
     }
-    
+
     if (validKeys.has(apiKey)) {
       req.auth = {
         isAuthenticated: true,
         clientId: `api-key-${apiKey.slice(0, 8)}...`,
-        authMethod: 'api-key',
+        authMethod: "api-key",
         metadata: { keyLength: apiKey.length },
       };
-      
+
       logger.debug(`API key authentication successful`, "auth");
       next();
     } else {
@@ -71,26 +71,26 @@ export function createAPIKeyAuth(validKeys: Set<string>) {
  */
 export function createRateLimiter(maxRequests: number = 100, windowMs: number = 60000) {
   const clients = new Map<string, { count: number; resetTime: number }>();
-  
+
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      const clientId = req.ip || req.headers['x-forwarded-for'] as string || 'unknown';
+      const clientId = req.ip || (req.headers["x-forwarded-for"] as string) || "unknown";
       const now = Date.now();
-      
+
       // Clean up expired entries
       for (const [id, data] of clients.entries()) {
         if (now > data.resetTime) {
           clients.delete(id);
         }
       }
-      
+
       // Get or create client record
       let clientData = clients.get(clientId);
       if (!clientData || now > clientData.resetTime) {
         clientData = { count: 0, resetTime: now + windowMs };
         clients.set(clientId, clientData);
       }
-      
+
       // Check rate limit
       if (clientData.count >= maxRequests) {
         logger.warning(`Rate limit exceeded for client: ${clientId}`, "auth");
@@ -109,17 +109,17 @@ export function createRateLimiter(maxRequests: number = 100, windowMs: number = 
         });
         return;
       }
-      
+
       // Increment count
       clientData.count++;
-      
+
       // Add rate limiting headers
       res.set({
-        'X-RateLimit-Limit': maxRequests.toString(),
-        'X-RateLimit-Remaining': (maxRequests - clientData.count).toString(),
-        'X-RateLimit-Reset': new Date(clientData.resetTime).toISOString(),
+        "X-RateLimit-Limit": maxRequests.toString(),
+        "X-RateLimit-Remaining": (maxRequests - clientData.count).toString(),
+        "X-RateLimit-Reset": new Date(clientData.resetTime).toISOString(),
       });
-      
+
       next();
     } catch (error) {
       logger.error(`Rate limiter error: ${error}`, "auth");
@@ -135,14 +135,15 @@ export function createRateLimiter(maxRequests: number = 100, windowMs: number = 
 export function securityHeaders(_req: Request, res: Response, next: NextFunction) {
   // Set security headers
   res.set({
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
-    'X-XSS-Protection': '1; mode=block',
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy":
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
   });
-  
+
   next();
 }
 
@@ -161,12 +162,12 @@ interface JSONRPCRequest {
  */
 function isJSONRPCRequest(body: unknown): body is JSONRPCRequest {
   return (
-    typeof body === 'object' &&
+    typeof body === "object" &&
     body !== null &&
-    'jsonrpc' in body &&
-    'method' in body &&
-    typeof (body as JSONRPCRequest).jsonrpc === 'string' &&
-    typeof (body as JSONRPCRequest).method === 'string'
+    "jsonrpc" in body &&
+    "method" in body &&
+    typeof (body as JSONRPCRequest).jsonrpc === "string" &&
+    typeof (body as JSONRPCRequest).method === "string"
   );
 }
 
@@ -175,14 +176,14 @@ function isJSONRPCRequest(body: unknown): body is JSONRPCRequest {
  */
 export function validateMCPRequest(req: Request, res: Response, next: NextFunction) {
   // Only validate POST requests to /mcp endpoint
-  if (req.method !== 'POST' || req.path !== '/mcp') {
+  if (req.method !== "POST" || req.path !== "/mcp") {
     return next();
   }
-  
+
   const serverStatus = getServerStatus();
-  
+
   // Check if server is in a valid state for processing requests
-  if (serverStatus.state === 'shutting_down' || serverStatus.state === 'shutdown') {
+  if (serverStatus.state === "shutting_down" || serverStatus.state === "shutdown") {
     logger.warning(`Request received during ${serverStatus.state}`, "auth");
     res.status(503).json({
       jsonrpc: "2.0",
@@ -198,13 +199,13 @@ export function validateMCPRequest(req: Request, res: Response, next: NextFuncti
     });
     return;
   }
-  
+
   // Allow requests during initialization and operational states
-  if (!serverStatus.isOperational && serverStatus.state !== 'initialized') {
+  if (!serverStatus.isOperational && serverStatus.state !== "initialized") {
     logger.info(`Request received while server in ${serverStatus.state} state`, "auth");
     // Continue processing - some requests (like initialize) are needed during initialization
   }
-  
+
   // Validate JSON-RPC structure using type guard
   if (!isJSONRPCRequest(req.body)) {
     logger.warning("Invalid request body structure", "auth");
@@ -218,9 +219,9 @@ export function validateMCPRequest(req: Request, res: Response, next: NextFuncti
     });
     return;
   }
-  
+
   const { jsonrpc, method, id } = req.body;
-  
+
   // Validate JSON-RPC version
   if (jsonrpc !== "2.0") {
     logger.warning(`Invalid JSON-RPC version: ${jsonrpc}`, "auth");
@@ -234,7 +235,7 @@ export function validateMCPRequest(req: Request, res: Response, next: NextFuncti
     });
     return;
   }
-  
+
   // Validate method (already checked in type guard, but explicit for clarity)
   if (!method.trim()) {
     logger.warning("Empty method name", "auth");
@@ -248,10 +249,10 @@ export function validateMCPRequest(req: Request, res: Response, next: NextFuncti
     });
     return;
   }
-  
+
   // Log valid request
   logger.debug(`Valid MCP request: ${method}`, "auth");
-  
+
   next();
 }
 
@@ -283,7 +284,7 @@ export const AUTH_SETTINGS = {
  * Get current environment settings
  */
 export function getAuthSettings() {
-  const env = process.env.NODE_ENV || 'development';
+  const env = process.env.NODE_ENV || "development";
   return AUTH_SETTINGS[env as keyof typeof AUTH_SETTINGS] || AUTH_SETTINGS.development;
 }
 
@@ -304,17 +305,17 @@ export function createAuthMiddleware(options?: AuthMiddlewareOptions) {
   const settings = getAuthSettings();
   const apiKeys = new Set(options?.apiKeys || []);
   const rateLimit = options?.customRateLimit || settings.rateLimit;
-  
+
   const middleware: Array<(req: Request, res: Response, next: NextFunction) => void> = [];
-  
+
   // Always add security headers in production
   if (settings.enableSecurityHeaders) {
     middleware.push(securityHeaders);
   }
-  
+
   // Add rate limiting
   middleware.push(createRateLimiter(rateLimit.maxRequests, rateLimit.windowMs));
-  
+
   // Add API key auth if keys are provided
   if (apiKeys.size > 0) {
     middleware.push(createAPIKeyAuth(apiKeys));
@@ -323,15 +324,15 @@ export function createAuthMiddleware(options?: AuthMiddlewareOptions) {
     middleware.push((req: Request, _res: Response, next: NextFunction) => {
       req.auth = {
         isAuthenticated: false,
-        authMethod: 'none',
+        authMethod: "none",
       };
       next();
     });
   }
-  
+
   // Add MCP request validation
   middleware.push(validateMCPRequest);
-  
+
   return middleware;
 }
 
@@ -340,7 +341,11 @@ export function createAuthMiddleware(options?: AuthMiddlewareOptions) {
  * Use this to wrap handlers that need auth context
  */
 export function withAuth<T extends Request>(
-  handler: (req: T & { auth: AuthContext }, res: Response, next: NextFunction) => void | Promise<void>
+  handler: (
+    req: T & { auth: AuthContext },
+    res: Response,
+    next: NextFunction
+  ) => void | Promise<void>
 ) {
   return (req: T, res: Response, next: NextFunction) => {
     if (!req.auth) {
@@ -355,7 +360,7 @@ export function withAuth<T extends Request>(
       });
       return;
     }
-    
+
     return handler(req as T & { auth: AuthContext }, res, next);
   };
 }
@@ -384,7 +389,7 @@ export function getClientId(req: AuthenticatedRequest): string | undefined {
  * Get authentication method used (type-safe)
  * Throws if request hasn't been processed by auth middleware
  */
-export function getAuthMethod(req: AuthenticatedRequest): AuthContext['authMethod'] {
+export function getAuthMethod(req: AuthenticatedRequest): AuthContext["authMethod"] {
   return req.auth.authMethod;
 }
 
@@ -396,7 +401,7 @@ export function getAuthMethod(req: AuthenticatedRequest): AuthContext['authMetho
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   // First assert that auth middleware has run
   assertAuthenticated(req);
-  
+
   if (!req.auth.isAuthenticated) {
     logger.warning("Unauthorized access attempt", "auth");
     res.status(401).json({
@@ -405,15 +410,15 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
         code: -32602,
         message: "Authentication required",
         data: {
-          authMethods: ['api-key'],
-          headerRequired: 'x-api-key',
+          authMethods: ["api-key"],
+          headerRequired: "x-api-key",
         },
       },
       id: null,
     });
     return;
   }
-  
+
   logger.debug(`Authenticated request from client: ${req.auth.clientId}`, "auth");
   next();
 }
@@ -426,13 +431,13 @@ export function logAuthEvent(req: Request, event: string, details?: Record<strin
   const authInfo = {
     event,
     clientId: req.auth?.clientId,
-    authMethod: req.auth?.authMethod ?? 'none',
+    authMethod: req.auth?.authMethod ?? "none",
     isAuthenticated: req.auth?.isAuthenticated ?? false,
-    userAgent: req.headers['user-agent'],
+    userAgent: req.headers["user-agent"],
     ip: req.ip,
     ...details,
   };
-  
+
   logger.info(authInfo, "auth-audit");
 }
 
@@ -440,8 +445,8 @@ export function logAuthEvent(req: Request, event: string, details?: Record<strin
  * Type-safe version of logAuthEvent for authenticated requests
  */
 export function logAuthenticatedEvent(
-  req: AuthenticatedRequest, 
-  event: string, 
+  req: AuthenticatedRequest,
+  event: string,
   details?: Record<string, unknown>
 ) {
   const authInfo = {
@@ -449,10 +454,10 @@ export function logAuthenticatedEvent(
     clientId: req.auth.clientId,
     authMethod: req.auth.authMethod,
     isAuthenticated: req.auth.isAuthenticated,
-    userAgent: req.headers['user-agent'],
+    userAgent: req.headers["user-agent"],
     ip: req.ip,
     ...details,
   };
-  
+
   logger.info(authInfo, "auth-audit");
 }

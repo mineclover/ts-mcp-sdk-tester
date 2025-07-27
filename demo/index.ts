@@ -1,9 +1,9 @@
 /**
  * Demo Data Index
- * 
+ *
  * Central export for all demo data used in the MCP SDK Tester.
  * This file provides easy access to demo resources, tools, prompts, and utilities.
- * 
+ *
  * To remove demo data:
  * 1. Delete this entire /demo directory
  * 2. Update imports in the standard/ files to remove demo data references

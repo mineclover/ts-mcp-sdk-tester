@@ -1,6 +1,6 @@
 /**
  * Demo Tool Data
- * 
+ *
  * Sample tools for testing and demonstration purposes.
  * This file contains demo data that can be easily removed or modified.
  */
@@ -123,7 +123,7 @@ export const DEMO_TOOLS: Tool[] = [
   },
 ];
 
-export function executeDemoTool(name: string, args: Record<string, any>): CallToolResult {
+export function executeDemoTool(name: string, args: Record<string, unknown>): CallToolResult {
   switch (name) {
     case "echo":
       return {
@@ -135,10 +135,10 @@ export function executeDemoTool(name: string, args: Record<string, any>): CallTo
         ],
       };
 
-    case "calculator":
+    case "calculator": {
       const { operation, a, b } = args;
       let result: number;
-      
+
       switch (operation) {
         case "add":
           result = a + b;
@@ -179,26 +179,31 @@ export function executeDemoTool(name: string, args: Record<string, any>): CallTo
         content: [
           {
             type: "text",
-            text: JSON.stringify({
-              result,
-              operation,
-              calculation: `${a} ${operation} ${b} = ${result}`,
-            }, null, 2),
+            text: JSON.stringify(
+              {
+                result,
+                operation,
+                calculation: `${a} ${operation} ${b} = ${result}`,
+              },
+              null,
+              2
+            ),
           } as ContentBlock,
         ],
       };
+    }
 
-    case "file-info":
+    case "file-info": {
       const { filepath } = args;
-      
+
       // Simulate file information
       const info = {
         filepath,
         exists: true,
         size: Math.floor(Math.random() * 10000) + 100,
-        type: filepath.includes('.') ? filepath.split('.').pop() : 'unknown',
+        type: filepath.includes(".") ? filepath.split(".").pop() : "unknown",
         lastModified: new Date().toISOString(),
-        permissions: 'rw-r--r--',
+        permissions: "rw-r--r--",
       };
 
       return {
@@ -209,10 +214,11 @@ export function executeDemoTool(name: string, args: Record<string, any>): CallTo
           } as ContentBlock,
         ],
       };
+    }
 
-    case "random-number":
+    case "random-number": {
       const { min, max } = args;
-      
+
       if (min > max) {
         return {
           content: [
@@ -226,19 +232,24 @@ export function executeDemoTool(name: string, args: Record<string, any>): CallTo
       }
 
       const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
-      
+
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify({
-              value: randomNum,
-              range: { min, max },
-              timestamp: new Date().toISOString(),
-            }, null, 2),
+            text: JSON.stringify(
+              {
+                value: randomNum,
+                range: { min, max },
+                timestamp: new Date().toISOString(),
+              },
+              null,
+              2
+            ),
           } as ContentBlock,
         ],
       };
+    }
 
     default:
       return {

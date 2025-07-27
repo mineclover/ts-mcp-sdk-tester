@@ -15,10 +15,12 @@ import { logger } from "./logger.js";
 // Custom schema for logging configuration
 const LoggingConfigRequestSchema = z.object({
   method: z.literal("logging/config"),
-  params: z.object({
-    sensitiveDataFilter: z.boolean().optional(),
-    rateLimiting: z.boolean().optional(),
-  }).optional(),
+  params: z
+    .object({
+      sensitiveDataFilter: z.boolean().optional(),
+      rateLimiting: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export function registerLoggingEndpoints(server: McpServer) {
@@ -27,7 +29,7 @@ export function registerLoggingEndpoints(server: McpServer) {
 
   registerSetLevel(server);
   registerLoggingConfig(server);
-  
+
   logger.info("Logging endpoints registered successfully", "logging");
 }
 
@@ -37,54 +39,61 @@ export function registerLoggingEndpoints(server: McpServer) {
  */
 function registerSetLevel(server: McpServer) {
   logger.logMethodEntry("registerSetLevel", undefined, "logging");
-  
-  server.server.setRequestHandler(SetLevelRequestSchema, async (request, extra): Promise<EmptyResult> => {
-    const { level } = request.params;
-    
-    await logger.logEndpointEntry("logging/setLevel", extra.requestId, { level });
 
-    try {
-      const previousLevel = logger.getLevel();
-      
-      // Actually configure the logging level
-      logger.setLevel(level);
+  server.server.setRequestHandler(
+    SetLevelRequestSchema,
+    async (request, extra): Promise<EmptyResult> => {
+      const { level } = request.params;
 
-      const result: EmptyResult = {
-        _meta: {
-          loggingLevel: level,
-          levelSetAt: new Date().toISOString(),
-          message: `Logging level set to: ${level}`,
-          previousLevel,
-          requestId: extra.requestId,
-          severityLevels: [
-            "debug",
-            "info",
-            "notice",
-            "warning",
-            "error",
-            "critical",
-            "alert",
-            "emergency",
-          ],
-        },
-      };
+      await logger.logEndpointEntry("logging/setLevel", extra.requestId, { level });
 
-      await logger.logMethodExit("logging/setLevel", {
-        requestId: extra.requestId,
-        level,
-        previousLevel,
-      }, "logging");
+      try {
+        const previousLevel = logger.getLevel();
 
-      return result;
-    } catch (error) {
-      await logger.logServerError(
-        error instanceof Error ? error : new Error(String(error)),
-        "logging/setLevel",
-        { requestId: extra.requestId, level }
-      );
-      throw error;
+        // Actually configure the logging level
+        logger.setLevel(level);
+
+        const result: EmptyResult = {
+          _meta: {
+            loggingLevel: level,
+            levelSetAt: new Date().toISOString(),
+            message: `Logging level set to: ${level}`,
+            previousLevel,
+            requestId: extra.requestId,
+            severityLevels: [
+              "debug",
+              "info",
+              "notice",
+              "warning",
+              "error",
+              "critical",
+              "alert",
+              "emergency",
+            ],
+          },
+        };
+
+        await logger.logMethodExit(
+          "logging/setLevel",
+          {
+            requestId: extra.requestId,
+            level,
+            previousLevel,
+          },
+          "logging"
+        );
+
+        return result;
+      } catch (error) {
+        await logger.logServerError(
+          error instanceof Error ? error : new Error(String(error)),
+          "logging/setLevel",
+          { requestId: extra.requestId, level }
+        );
+        throw error;
+      }
     }
-  });
+  );
 }
 
 /**
@@ -93,13 +102,13 @@ function registerSetLevel(server: McpServer) {
  */
 function registerLoggingConfig(server: McpServer) {
   logger.logMethodEntry("registerLoggingConfig", undefined, "logging");
-  
+
   // Custom logging configuration endpoint
   server.server.setRequestHandler(
     LoggingConfigRequestSchema,
     async (request, extra): Promise<EmptyResult> => {
       const { sensitiveDataFilter, rateLimiting } = request.params || {};
-      
+
       await logger.logEndpointEntry("logging/config", extra.requestId, {
         sensitiveDataFilter,
         rateLimiting,
@@ -107,13 +116,13 @@ function registerLoggingConfig(server: McpServer) {
 
       try {
         const config: any = {};
-        
-        if (typeof sensitiveDataFilter === 'boolean') {
+
+        if (typeof sensitiveDataFilter === "boolean") {
           logger.setSensitiveDataFilter(sensitiveDataFilter);
           config.sensitiveDataFilter = sensitiveDataFilter;
         }
-        
-        if (typeof rateLimiting === 'boolean') {
+
+        if (typeof rateLimiting === "boolean") {
           logger.setRateLimiting(rateLimiting);
           config.rateLimiting = rateLimiting;
         }
@@ -127,10 +136,14 @@ function registerLoggingConfig(server: McpServer) {
           },
         };
 
-        await logger.logMethodExit("logging/config", {
-          requestId: extra.requestId,
-          configUpdated: config,
-        }, "logging");
+        await logger.logMethodExit(
+          "logging/config",
+          {
+            requestId: extra.requestId,
+            configUpdated: config,
+          },
+          "logging"
+        );
 
         return result;
       } catch (error) {

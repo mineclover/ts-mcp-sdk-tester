@@ -1,6 +1,6 @@
 /**
  * Demo Resource Data
- * 
+ *
  * Sample resources for testing and demonstration purposes.
  * This file contains demo data that can be easily removed or modified.
  */
@@ -34,7 +34,9 @@ export const DEMO_RESOURCES: Resource[] = [
   },
 ];
 
-export function getDemoResourceContent(uri: string): (TextResourceContents | BlobResourceContents)[] {
+export function getDemoResourceContent(
+  uri: string
+): (TextResourceContents | BlobResourceContents)[] {
   if (uri === "test://resource1") {
     return [
       {
@@ -85,6 +87,6 @@ export function getDemoResourceContent(uri: string): (TextResourceContents | Blo
       },
     ];
   }
-  
+
   throw new Error(`Resource not found: ${uri}`);
 }

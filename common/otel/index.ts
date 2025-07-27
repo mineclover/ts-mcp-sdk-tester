@@ -4,22 +4,22 @@
  */
 
 // Export types
-export * from './types.js';
+export * from "./types.js";
 
 // Export provider
-export * from './provider.js';
+export * from "./provider.js";
 
 // Re-export commonly used OpenTelemetry APIs
-export { 
-  trace, 
-  metrics, 
+export {
+  trace,
+  metrics,
   context,
   propagation,
-  SpanStatusCode, 
+  SpanStatusCode,
   SpanKind,
   type Span,
   type SpanContext,
   type Tracer,
   type Meter,
   type Attributes,
-} from '@opentelemetry/api';
+} from "@opentelemetry/api";

@@ -8,54 +8,61 @@ import { logger } from "./logger.js";
  *
  * Implements the core MCP ping protocol endpoint:
  * - ping: Responds to ping requests to check server connectivity
- * 
+ *
  * Provides server health monitoring and connectivity testing.
  * All ping requests and responses are logged for monitoring purposes.
  */
 
 export function registerPingEndpoint(server: McpServer) {
-  logger.logMethodEntry("registerPingEndpoint", { serverType: 'McpServer' }, "ping");
-  
-  server.server.setRequestHandler(PingRequestSchema, async (request, extra): Promise<EmptyResult> => {
-    const startTime = Date.now();
-    
-    // Log ping request for monitoring (debug level to avoid spam)
-    await logger.logEndpointEntry("ping", extra.requestId, {
-      timestamp: new Date().toISOString(),
-      method: "ping",
-    });
+  logger.logMethodEntry("registerPingEndpoint", { serverType: "McpServer" }, "ping");
 
-    try {
-      // MCP spec requires empty response, but we can include helpful metadata
-      const responseTime = Date.now() - startTime;
-      const result: EmptyResult = {
-        _meta: {
-          serverTime: new Date().toISOString(),
-          status: "ok",
-          uptime: process.uptime(),
-          responseTimeMs: responseTime,
-          requestId: extra.requestId,
-        },
-      };
+  server.server.setRequestHandler(
+    PingRequestSchema,
+    async (request, extra): Promise<EmptyResult> => {
+      const startTime = Date.now();
 
-      // Log successful ping response
-      await logger.logMethodExit("ping", {
-        requestId: extra.requestId,
-        responseTimeMs: responseTime,
-        status: "success",
-      }, "ping");
+      // Log ping request for monitoring (debug level to avoid spam)
+      await logger.logEndpointEntry("ping", extra.requestId, {
+        timestamp: new Date().toISOString(),
+        method: "ping",
+      });
 
-      return result;
-    } catch (error) {
-      // This should rarely happen for ping, but log if it does
-      await logger.logServerError(
-        error instanceof Error ? error : new Error(String(error)),
-        "ping endpoint",
-        { requestId: extra.requestId }
-      );
-      throw error;
+      try {
+        // MCP spec requires empty response, but we can include helpful metadata
+        const responseTime = Date.now() - startTime;
+        const result: EmptyResult = {
+          _meta: {
+            serverTime: new Date().toISOString(),
+            status: "ok",
+            uptime: process.uptime(),
+            responseTimeMs: responseTime,
+            requestId: extra.requestId,
+          },
+        };
+
+        // Log successful ping response
+        await logger.logMethodExit(
+          "ping",
+          {
+            requestId: extra.requestId,
+            responseTimeMs: responseTime,
+            status: "success",
+          },
+          "ping"
+        );
+
+        return result;
+      } catch (error) {
+        // This should rarely happen for ping, but log if it does
+        await logger.logServerError(
+          error instanceof Error ? error : new Error(String(error)),
+          "ping endpoint",
+          { requestId: extra.requestId }
+        );
+        throw error;
+      }
     }
-  });
-  
+  );
+
   logger.info("Ping endpoint registered successfully", "ping");
 }
