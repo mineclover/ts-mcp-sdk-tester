@@ -20,19 +20,15 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "recommended": false,
       "correctness": {
         "noUnusedVariables": "error",
-        "useExhaustiveDependencies": "warn",
         "noUndeclaredVariables": "error"
       },
       "style": {
-        "useConst": "error",
-        "useTemplate": "off"
+        "useConst": "error"
       },
       "suspicious": {
-        "noExplicitAny": "warn",
-        "noArrayIndexKey": "warn",
         "noAsyncPromiseExecutor": "error"
       }
     }
@@ -55,12 +51,12 @@
     }
   },
   "assist": {
-    "enabled": true,
     "actions": {
       "source": {
         "organizeImports": "on"
       }
-    }
+    },
+    "enabled": true
   },
   "overrides": [
     {

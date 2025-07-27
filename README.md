@@ -2,19 +2,6 @@
 
 A comprehensive testing server for Model Context Protocol (MCP) SDK features. This server exposes all MCP SDK capabilities as tools for testing and validation.
 
-## Features
-
-- **Complete MCP SDK Testing**: Test all server capabilities including resources, tools, prompts, and notifications
-- **Dual Transport Support**: Both stdio (standard) and HTTP+SSE transports
-- **Dynamic Registration**: Register and test resources, tools, and prompts at runtime
-- **Web Interface**: Built-in web interface for easy testing and documentation
-- **Standard Implementation**: Uses Express.js with proper CORS and session management
-- **Lifecycle Management**: Complete MCP lifecycle implementation with session isolation support
-
-## Documentation
-
-- [Lifecycle Management](./docs/lifecycle.md) - MCP 라이프사이클 관리 및 세션 격리
-
 ## Build the server
 
 ```bash
@@ -99,3 +86,10 @@ settings.local.json
   }
 ```
 
+
+# claude code 특징 
+tools 의 조회 시점이 claude 를 킨 시점으로 고정됨
+이미 그 때 세션 아이디 받아서 tools를 대기시켜두는 형태
+
+즉 인위적으로 세션을 생성시키려하면 header를 주입하지 못하기 때문에 문제가 생김
+그래서 
