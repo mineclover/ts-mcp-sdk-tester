@@ -1,5 +1,5 @@
-import { EventStore } from "../../server/streamableHttp.js";
-import { JSONRPCMessage } from "../../types.js";
+import type { EventStore } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
 
 /**
  * Simple in-memory implementation of the EventStore interface for resumability
@@ -38,10 +38,7 @@ export class InMemoryEventStore implements EventStore {
    * Replays events that occurred after a specific event ID
    * Implements EventStore.replayEventsAfter
    */
-  async replayEventsAfter(
-    lastEventId: string,
-    { send }: { send: (eventId: string, message: JSONRPCMessage) => Promise<void> }
-  ): Promise<string> {
+  async replayEventsAfter(lastEventId: string, { send }: { send: (eventId: string, message: JSONRPCMessage) => Promise<void> }): Promise<string> {
     if (!lastEventId || !this.events.has(lastEventId)) {
       return "";
     }

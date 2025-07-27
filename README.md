@@ -91,5 +91,14 @@ settings.local.json
 tools 의 조회 시점이 claude 를 킨 시점으로 고정됨
 이미 그 때 세션 아이디 받아서 tools를 대기시켜두는 형태
 
-즉 인위적으로 세션을 생성시키려하면 header를 주입하지 못하기 때문에 문제가 생김
-그래서 
+즉 인위적으로 세션을 생성시키려하면 header를 주입하지 못하기 때문에 실행되지 않음
+그래서 세션을 기억하지 않아도 되는 서버는 stateless 로 구현하는 게 좋음
+
+
+# mcp 서버 특징
+
+스펙인 것은 따로 구현하지 않아도 McpServer에 구현되 있어서 동작한다 
+하지만 그 동작이 mcp 내에서 동작중이라서 메모리 만약 효율적이게 하고 싶다면 내부 데이터 저장 로직과 나머지 로직을 수정해야한다
+https://github.com/modelcontextprotocol/typescript-sdk/blob/main/src/server/mcp.ts
+
+

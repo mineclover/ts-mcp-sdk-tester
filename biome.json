@@ -14,7 +14,7 @@
     "formatWithErrors": false,
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 100,
+    "lineWidth": 160,
     "lineEnding": "lf"
   },
   "linter": {
@@ -26,7 +26,9 @@
         "noUndeclaredVariables": "error"
       },
       "style": {
-        "useConst": "error"
+        "useConst": "error",
+        "useImportType": "error",
+        "useExportType": "error"
       },
       "suspicious": {
         "noAsyncPromiseExecutor": "error"

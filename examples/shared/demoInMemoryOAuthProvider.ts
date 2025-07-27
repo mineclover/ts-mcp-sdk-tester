@@ -1,19 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { type OAuthRegisteredClientsStore } from "@modelcontextprotocol/sdk/server/auth/clients.js";
-import {
-  type AuthorizationParams,
-  type OAuthServerProvider,
-} from "@modelcontextprotocol/sdk/server/auth/provider.js";
-import {
-  createOAuthMetadata,
-  mcpAuthRouter,
-} from "@modelcontextprotocol/sdk/server/auth/router.js";
-import { type AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
-import {
-  type OAuthClientInformationFull,
-  type OAuthMetadata,
-  type OAuthTokens,
-} from "@modelcontextprotocol/sdk/shared/auth.js";
+import type { OAuthRegisteredClientsStore } from "@modelcontextprotocol/sdk/server/auth/clients.js";
+import type { AuthorizationParams, OAuthServerProvider } from "@modelcontextprotocol/sdk/server/auth/provider.js";
+import { createOAuthMetadata, mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
+import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import type { OAuthClientInformationFull, OAuthMetadata, OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { resourceUrlFromServerUrl } from "@modelcontextprotocol/sdk/shared/auth-utils.js";
 import express, { type Request, type Response } from "express";
 
@@ -51,11 +41,7 @@ export class DemoInMemoryAuthProvider implements OAuthServerProvider {
 
   constructor(private validateResource?: (resource?: URL) => boolean) {}
 
-  async authorize(
-    client: OAuthClientInformationFull,
-    params: AuthorizationParams,
-    res: Response
-  ): Promise<void> {
+  async authorize(client: OAuthClientInformationFull, params: AuthorizationParams, res: Response): Promise<void> {
     const code = randomUUID();
 
     const searchParams = new URLSearchParams({
@@ -75,10 +61,7 @@ export class DemoInMemoryAuthProvider implements OAuthServerProvider {
     res.redirect(targetUrl.toString());
   }
 
-  async challengeForAuthorizationCode(
-    client: OAuthClientInformationFull,
-    authorizationCode: string
-  ): Promise<string> {
+  async challengeForAuthorizationCode(client: OAuthClientInformationFull, authorizationCode: string): Promise<string> {
     // Store the challenge with the code data
     const codeData = this.codes.get(authorizationCode);
     if (!codeData) {
@@ -101,9 +84,7 @@ export class DemoInMemoryAuthProvider implements OAuthServerProvider {
     }
 
     if (codeData.client.client_id !== client.client_id) {
-      throw new Error(
-        `Authorization code was not issued to this client, ${codeData.client.client_id} != ${client.client_id}`
-      );
+      throw new Error(`Authorization code was not issued to this client, ${codeData.client.client_id} != ${client.client_id}`);
     }
 
     if (this.validateResource && !this.validateResource(codeData.params.resource)) {
@@ -132,12 +113,7 @@ export class DemoInMemoryAuthProvider implements OAuthServerProvider {
     };
   }
 
-  async exchangeRefreshToken(
-    _client: OAuthClientInformationFull,
-    _refreshToken: string,
-    _scopes?: string[],
-    _resource?: URL
-  ): Promise<OAuthTokens> {
+  async exchangeRefreshToken(_client: OAuthClientInformationFull, _refreshToken: string, _scopes?: string[], _resource?: URL): Promise<OAuthTokens> {
     throw new Error("Not implemented for example demo");
   }
 

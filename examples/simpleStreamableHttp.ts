@@ -1,12 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
-import {
-  getOAuthProtectedResourceMetadataUrl,
-  mcpAuthMetadataRouter,
-} from "@modelcontextprotocol/sdk/server/auth/router.js";
+import { getOAuthProtectedResourceMetadataUrl, mcpAuthMetadataRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { type OAuthMetadata } from "@modelcontextprotocol/sdk/shared/auth.js";
+import type { OAuthMetadata } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { checkResourceAllowed } from "@modelcontextprotocol/sdk/shared/auth-utils.js";
 import {
   type CallToolResult,
@@ -20,7 +17,7 @@ import cors from "cors";
 import type { Request, Response } from "express";
 import express from "express";
 import { z } from "zod";
-import { setupAuthServer } from "./demoInMemoryOAuthProvider.js";
+import { setupAuthServer } from "./shared/demoInMemoryOAuthProvider.js";
 import { InMemoryEventStore } from "./shared/inMemoryEventStore.js";
 
 // Check for OAuth flag
@@ -109,9 +106,7 @@ const getServer = () => {
     "collect-user-info",
     "A tool that collects user information through elicitation",
     {
-      infoType: z
-        .enum(["contact", "preferences", "feedback"])
-        .describe("Type of information to collect"),
+      infoType: z.enum(["contact", "preferences", "feedback"]).describe("Type of information to collect"),
     },
     async ({ infoType }): Promise<CallToolResult> => {
       let message: string;
@@ -389,10 +384,7 @@ const getServer = () => {
       title: "List Files with ResourceLinks",
       description: "Returns a list of files as ResourceLinks without embedding their content",
       inputSchema: {
-        includeDescriptions: z
-          .boolean()
-          .optional()
-          .describe("Whether to include descriptions in the resource links"),
+        includeDescriptions: z.boolean().optional().describe("Whether to include descriptions in the resource links"),
       },
     },
     async ({ includeDescriptions = true }): Promise<CallToolResult> => {
@@ -498,9 +490,7 @@ if (useOAuth) {
         if (!data.aud) {
           throw new Error(`Resource Indicator (RFC8707) missing`);
         }
-        if (
-          !checkResourceAllowed({ requestedResource: data.aud, configuredResource: mcpServerUrl })
-        ) {
+        if (!checkResourceAllowed({ requestedResource: data.aud, configuredResource: mcpServerUrl })) {
           throw new Error(`Expected resource indicator ${mcpServerUrl}, got: ${data.aud}`);
         }
       }

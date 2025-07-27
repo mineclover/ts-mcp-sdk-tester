@@ -968,15 +968,7 @@ export interface LoggingMessageNotification extends Notification {
  * These map to syslog message severities, as specified in RFC-5424:
  * https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1
  */
-export type LoggingLevel =
-  | "debug"
-  | "info"
-  | "notice"
-  | "warning"
-  | "error"
-  | "critical"
-  | "alert"
-  | "emergency";
+export type LoggingLevel = "debug" | "info" | "notice" | "warning" | "error" | "critical" | "alert" | "emergency";
 
 /* Sampling */
 /**
@@ -1075,12 +1067,7 @@ export interface Annotations {
   lastModified?: string;
 }
 
-export type ContentBlock =
-  | TextContent
-  | ImageContent
-  | AudioContent
-  | ResourceLink
-  | EmbeddedResource;
+export type ContentBlock = TextContent | ImageContent | AudioContent | ResourceLink | EmbeddedResource;
 
 /**
  * Text provided to or from an LLM.
@@ -1486,11 +1473,7 @@ export type ClientRequest =
   | ListToolsRequest;
 
 /** @internal */
-export type ClientNotification =
-  | CancelledNotification
-  | ProgressNotification
-  | InitializedNotification
-  | RootsListChangedNotification;
+export type ClientNotification = CancelledNotification | ProgressNotification | InitializedNotification | RootsListChangedNotification;
 
 /** @internal */
 export type ClientResult = EmptyResult | CreateMessageResult | ListRootsResult | ElicitResult;
