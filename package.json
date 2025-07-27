@@ -8,7 +8,7 @@
     "build": "mkdir -p dist && bun build --compile --outfile=dist/$npm_package_name index.ts",
     "build:simple": "mkdir -p dist && bun build --compile --outfile=dist/simple-mcp-server simple-server.ts",
     "type-check": "bun x typescript --noEmit --strict --project tsconfig.json",
-    "dev": "bun --watch index.ts --port 3000",
+    "dev": "bun --watch index.ts --transport http --port 3000",
     "dev:simple": "bun --watch simple-server.ts --port=3000",
     "show-package-name": "echo $npm_package_name",
     "format": "biome format --write .",

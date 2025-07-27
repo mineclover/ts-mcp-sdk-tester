@@ -24,16 +24,9 @@ import { InMemoryEventStore } from "./shared/inMemoryEventStore.js";
 const useOAuth = process.argv.includes("--oauth");
 const strictOAuth = process.argv.includes("--oauth-strict");
 
-// Create an MCP server with implementation details
-const getServer = () => {
-  const server = new McpServer(
-    {
-      name: "simple-streamable-http-server",
-      version: "1.0.0",
-    },
-    { capabilities: { logging: {} } }
-  );
 
+export const registerDemoEndpoints = (server: McpServer) => {
+  
   // Register a simple tool that returns a greeting
   server.registerTool(
     "greet",
@@ -249,6 +242,20 @@ const getServer = () => {
       }
     }
   );
+
+
+}
+
+// Create an MCP server with implementation details
+const getServer = () => {
+  const server = new McpServer(
+    {
+      name: "simple-streamable-http-server",
+      version: "1.0.0",
+    },
+    { capabilities: { logging: {} } }
+  );
+
 
   // Register a simple prompt with title
   server.registerPrompt(

@@ -1,173 +1,181 @@
-import express, { type Request, type Response } from 'express';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { z } from 'zod';
-import type { CallToolResult, GetPromptResult, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
-import cors from 'cors';
+#!/usr/bin/env node
 
-const getServer = () => {
-  // Create an MCP server with implementation details
-  const server = new McpServer({
-    name: 'stateless-streamable-http-server',
-    version: '1.0.0',
-  }, { capabilities: { logging: {} } });
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
+import { createServer } from "http";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { Command } from "commander";
+import { IncomingMessage } from "http";
+import type { ServerOptions } from "@modelcontextprotocol/sdk/server/index.js";
+import type { Implementation } from "@modelcontextprotocol/sdk/types.js";
+import { registerEndpoints } from "./standard/route"
+// Parse CLI arguments using commander
+const program = new Command()
+  .option("--transport <stdio|http>", "transport type", "stdio")
+  .option("--port <number>", "port for HTTP transport", "3000")
+  .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
+  .parse(process.argv);
 
-  // Register a simple prompt
-  server.prompt(
-    'greeting-template',
-    'A simple greeting prompt template',
-    {
-      name: z.string().describe('Name to include in greeting'),
-    },
-    async ({ name }): Promise<GetPromptResult> => {
-      return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: `Please greet ${name} in a friendly manner.`,
-            },
-          },
-        ],
-      };
-    }
+const cliOptions = program.opts<{
+  transport: string;
+  port: string;
+}>();
+
+// Validate transport option
+const allowedTransports = ["stdio", "http"];
+if (!allowedTransports.includes(cliOptions.transport)) {
+  console.error(
+    `Invalid --transport value: '${cliOptions.transport}'. Must be one of: stdio, http.`
   );
+  process.exit(1);
+}
 
-  // Register a tool specifically for testing resumability
-  server.tool(
-    'start-notification-stream',
-    'Starts sending periodic notifications for testing resumability',
-    {
-      interval: z.number().describe('Interval in milliseconds between notifications').default(100),
-      count: z.number().describe('Number of notifications to send (0 for 100)').default(10),
-    },
-    async ({ interval, count }, { sendNotification }): Promise<CallToolResult> => {
-      const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-      let counter = 0;
+// Transport configuration
+const TRANSPORT_TYPE = (cliOptions.transport || "stdio") as "stdio" | "http";
 
-      while (count === 0 || counter < count) {
-        counter++;
-        try {
-          await sendNotification({
-            method: "notifications/message",
-            params: {
-              level: "info",
-              data: `Periodic notification #${counter} at ${new Date().toISOString()}`
-            }
-          });
-        }
-        catch (error) {
-          console.error("Error sending notification:", error);
-        }
-        // Wait for the specified interval
-        await sleep(interval);
-      }
+// HTTP port configuration
+const CLI_PORT = (() => {
+  const parsed = parseInt(cliOptions.port, 10);
+  return isNaN(parsed) ? undefined : parsed;
+})();
 
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Started sending periodic notifications every ${interval}ms`,
-          }
-        ],
-      };
-    }
+const serverInfo = {
+  name: "Context7",
+  version: "1.0.13",
+} as Implementation;
+
+const serverOptions = {
+  instructions:
+    "Use this server to retrieve up-to-date documentation and code examples for any library.",
+} as ServerOptions;
+
+
+
+
+function createServerInstance() {
+
+  const server = new McpServer(
+    serverInfo,
+    serverOptions
   );
+  registerEndpoints(server);
 
-  // Create a simple resource at a fixed URI
-  server.resource(
-    'greeting-resource',
-    'https://example.com/greetings/default',
-    { mimeType: 'text/plain' },
-    async (): Promise<ReadResourceResult> => {
-      return {
-        contents: [
-          {
-            uri: 'https://example.com/greetings/default',
-            text: 'Hello, world!',
-          },
-        ],
-      };
-    }
-  );
   return server;
 }
 
-const app = express();
-app.use(express.json());
 
-// Configure CORS to expose Mcp-Session-Id header for browser-based clients
-app.use(cors({
-  origin: '*', // Allow all origins - adjust as needed for production
-  exposedHeaders: ['Mcp-Session-Id']
-}));
 
-app.post('/mcp', async (req: Request, res: Response) => {
-  const server = getServer();
-  try {
-    const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
+async function main() {
+  const transportType = TRANSPORT_TYPE;
+
+  if (transportType === "http") {
+    // Get initial port from environment or use default
+    const initialPort = CLI_PORT ?? 3000;
+    // Keep track of which port we end up using
+    let actualPort = initialPort;
+    const httpServer = createServer(async (req, res) => {
+      const url = new URL(req.url || "", `http://${req.headers.host}`).pathname;
+
+      // Set CORS headers for all responses
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, MCP-Session-Id, mcp-session-id, MCP-Protocol-Version"
+      );
+      res.setHeader("Access-Control-Expose-Headers", "MCP-Session-Id");
+
+      // Handle preflight OPTIONS requests
+      if (req.method === "OPTIONS") {
+        res.writeHead(200);
+        res.end();
+        return;
+      }
+
+      try {        // Create new server instance for each request
+        const requestServer = createServerInstance();
+
+        if (url === "/mcp") {
+          const transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: undefined,
+          });
+          await requestServer.connect(transport);
+          await transport.handleRequest(req, res);
+        } else if (url === "/sse" && req.method === "GET") {
+          res.writeHead(405).end(JSON.stringify({
+            jsonrpc: "2.0",
+            error: {
+              code: -32000,
+              message: "Method not allowed."
+            },
+            id: null
+          }));
+        } else if (url === "/messages" && req.method === "POST") {
+
+           res.writeHead(405).end(JSON.stringify({
+            jsonrpc: "2.0",
+            error: {
+              code: -32000,
+              message: "Method not allowed."
+            },
+            id: null
+          }));
+        } else if (url === "/ping") {
+          res.writeHead(200, { "Content-Type": "text/plain" });
+          res.end("pong");
+        } else {
+          res.writeHead(404);
+          res.end("Not found");
+        }
+        return requestServer;
+        
+      } catch (error) {
+        console.error("Error handling request:", error);
+        if (!res.headersSent) {
+          res.writeHead(500);
+          res.end("Internal Server Error");
+        }
+      }
     });
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
-    res.on('close', () => {
-      console.log('Request closed');
-      transport.close();
-      server.close();
-    });
-  } catch (error) {
-    console.error('Error handling MCP request:', error);
-    if (!res.headersSent) {
-      res.status(500).json({
-        jsonrpc: '2.0',
-        error: {
-          code: -32603,
-          message: 'Internal server error',
-        },
-        id: null,
+
+    // Function to attempt server listen with port fallback
+    const startServer = (port: number, maxAttempts = 10) => {
+      httpServer.once("error", (err: NodeJS.ErrnoException) => {
+        if (err.code === "EADDRINUSE" && port < initialPort + maxAttempts) {
+          console.warn(`Port ${port} is in use, trying port ${port + 1}...`);
+          startServer(port + 1, maxAttempts);
+        } else {
+          console.error(`Failed to start server: ${err.message}`);
+          process.exit(1);
+        }
       });
-    }
+
+      httpServer.listen(port, () => {
+        actualPort = port;
+        console.error(
+          `MCP Server running on ${transportType.toUpperCase()} at http://localhost:${actualPort}/mcp and legacy SSE at /sse`
+        );
+      });
+    };
+
+    // Start the server with initial port
+    startServer(initialPort);
+   
+  } else {
+    // Stdio transport - this is already stateless by nature
+    const server = createServerInstance();
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error("MCP Server running on stdio");
   }
-});
 
-app.get('/mcp', async (req: Request, res: Response) => {
-  console.log('Received GET MCP request');
-  res.writeHead(405).end(JSON.stringify({
-    jsonrpc: "2.0",
-    error: {
-      code: -32000,
-      message: "Method not allowed."
-    },
-    id: null
-  }));
-});
-
-app.delete('/mcp', async (req: Request, res: Response) => {
-  console.log('Received DELETE MCP request');
-  res.writeHead(405).end(JSON.stringify({
-    jsonrpc: "2.0",
-    error: {
-      code: -32000,
-      message: "Method not allowed."
-    },
-    id: null
-  }));
-});
+  
+}
 
 
-// Start the server
-const PORT = 3000;
-app.listen(PORT, (error) => {
-  if (error) {
-    console.error('Failed to start server:', error);
+main().catch((error) => {
+    console.error("Fatal error in main():", error);
     process.exit(1);
-  }
-  console.log(`MCP Stateless Streamable HTTP Server listening on port ${PORT}`);
-});
-
-// Handle server shutdown
-process.on('SIGINT', async () => {
-  console.log('Shutting down server...');
-  process.exit(0);
-});
+  });
