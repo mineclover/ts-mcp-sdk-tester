@@ -6,6 +6,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { logger } from "./logger.js";
 import { SessionManager, type SessionInfo } from "./otel-session.js";
+import { APP_CONFIG } from "./constants.js";
 
 /**
  * MCP Lifecycle Management
@@ -70,7 +71,7 @@ export class SessionLifecycleManager {
   private shutdownHandlers: Array<() => Promise<void> | void> = [];
   
   // Protocol version and capabilities tracking (session-specific)
-  private protocolVersion: string = "2024-11-05";
+  private protocolVersion: string = APP_CONFIG.protocol;
   private clientCapabilities: LifecycleCapabilities = {};
   private serverCapabilities: LifecycleCapabilities = {};
   private clientInfo: LifecycleInfo | null = null;
@@ -384,7 +385,7 @@ export class SessionLifecycleManager {
     this.server = null;
     this.startTime = new Date();
     this.shutdownHandlers = [];
-    this.protocolVersion = "2024-11-05";
+    this.protocolVersion = APP_CONFIG.protocol;
     this.clientCapabilities = {};
     this.serverCapabilities = {};
     this.clientInfo = null;
@@ -505,7 +506,7 @@ export class LifecycleManager {
   private signalHandlersRegistered = false;
   
   // Protocol version and capabilities tracking
-  private protocolVersion: string = "2024-11-05";
+  private protocolVersion: string = APP_CONFIG.protocol;
   private clientCapabilities: LifecycleCapabilities = {};
   private serverCapabilities: LifecycleCapabilities = {};
   private clientInfo: LifecycleInfo | null = null;
@@ -912,7 +913,7 @@ export class LifecycleManager {
     this.startTime = new Date();
     this.shutdownHandlers = [];
     this.signalHandlersRegistered = false;
-    this.protocolVersion = "2024-11-05";
+    this.protocolVersion = APP_CONFIG.protocol;
     this.clientCapabilities = {};
     this.serverCapabilities = {};
     this.clientInfo = null;

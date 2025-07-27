@@ -14,6 +14,7 @@ import {
   type LifecycleInfo 
 } from "../standard/lifecycle.js";
 import { logger } from "../standard/logger.js";
+import { APP_CONFIG } from "../standard/constants.js";
 
 // Test server info
 const testServerInfo: LifecycleInfo = {
@@ -69,7 +70,7 @@ describe("Session Lifecycle Management", () => {
       
       const mockRequest = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {
             tools: { listChanged: true },
             resources: { subscribe: true },
@@ -83,7 +84,7 @@ describe("Session Lifecycle Management", () => {
 
       const response = manager.handleInitializeRequest(mockRequest);
       
-      expect(response.protocolVersion).toBe("2024-11-05");
+      expect(response.protocolVersion).toBe(APP_CONFIG.protocol);
       expect(response.serverInfo).toEqual(testServerInfo);
       expect(manager.getState()).toBe(LifecycleState.INITIALIZED);
       expect(manager.getClientInfo()).toEqual(mockRequest.params.clientInfo);
@@ -124,7 +125,7 @@ describe("Session Lifecycle Management", () => {
       // Initialize session1 only
       const request1 = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {},
           clientInfo: { name: "client1", version: "1.0.0" },
         },
@@ -145,7 +146,7 @@ describe("Session Lifecycle Management", () => {
       
       const request1 = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: { tools: { listChanged: true } },
           clientInfo: { name: "client1", version: "1.0.0" },
         },
@@ -153,7 +154,7 @@ describe("Session Lifecycle Management", () => {
       
       const request2 = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: { resources: { subscribe: true } },
           clientInfo: { name: "client2", version: "1.0.0" },
         },
@@ -196,7 +197,7 @@ describe("Session Lifecycle Management", () => {
       // Initialize both sessions
       const request = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {},
           clientInfo: { name: "test-client", version: "1.0.0" },
         },
@@ -242,7 +243,7 @@ describe("Session Lifecycle Management", () => {
       
       const request = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {},
           clientInfo: { name: "test-client", version: "1.0.0" },
         },
@@ -325,7 +326,7 @@ describe("Session Lifecycle Management", () => {
       
       const request = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: { tools: { listChanged: true } },
           clientInfo: { name: "status-client", version: "1.0.0" },
         },
@@ -337,7 +338,7 @@ describe("Session Lifecycle Management", () => {
       
       expect(status.sessionId).toBe(sessionId);
       expect(status.state).toBe(LifecycleState.INITIALIZED);
-      expect(status.protocolVersion).toBe("2024-11-05");
+      expect(status.protocolVersion).toBe(APP_CONFIG.protocol);
       expect(status.clientInfo).toEqual(request.params.clientInfo);
       expect(status.serverInfo).toEqual(testServerInfo);
       expect(status.uptime).toBeGreaterThanOrEqual(0);
@@ -373,7 +374,7 @@ describe("Session Lifecycle Management", () => {
       
       const request = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {},
           clientInfo: { name: "test-client", version: "1.0.0" },
         },
@@ -417,7 +418,7 @@ describe("Session Lifecycle Management", () => {
       
       const request = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {},
           clientInfo: { name: "test-client", version: "1.0.0" },
         },

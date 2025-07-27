@@ -8,6 +8,7 @@ import {
 } from "../standard/lifecycle.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { logger } from "../standard/logger.js";
+import { APP_CONFIG } from "../standard/constants.js";
 
 /**
  * MCP Lifecycle Tests
@@ -60,7 +61,7 @@ describe("MCP Lifecycle", () => {
       
       const mockRequest = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {
             roots: { listChanged: true },
             sampling: {},
@@ -76,7 +77,7 @@ describe("MCP Lifecycle", () => {
 
       const response = lifecycleManager.handleInitializeRequest(mockRequest);
 
-      expect(response.protocolVersion).toBe("2024-11-05");
+      expect(response.protocolVersion).toBe(APP_CONFIG.protocol);
       expect(response.serverInfo).toEqual(testServerInfo);
       expect(response.capabilities).toBeDefined();
       expect(response.instructions).toBe("MCP server ready for operation");
@@ -111,7 +112,7 @@ describe("MCP Lifecycle", () => {
 
       const mockRequest = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {},
           clientInfo
         }
@@ -128,7 +129,7 @@ describe("MCP Lifecycle", () => {
       
       const mockRequest = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {},
           clientInfo: { name: "TestClient", version: "1.0.0" }
         }
@@ -147,7 +148,7 @@ describe("MCP Lifecycle", () => {
       
       const mockRequest = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {},
           clientInfo: { name: "TestClient", version: "1.0.0" }
         }
@@ -192,7 +193,7 @@ describe("MCP Lifecycle", () => {
     });
 
     test("should return correct protocol version", () => {
-      expect(lifecycleManager.getProtocolVersion()).toBe("2024-11-05");
+      expect(lifecycleManager.getProtocolVersion()).toBe(APP_CONFIG.protocol);
     });
 
     test("should return client capabilities", () => {
@@ -216,7 +217,7 @@ describe("MCP Lifecycle", () => {
       
       const mockRequest = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {},
           clientInfo: { name: "TestClient", version: "1.0.0" }
         }
@@ -304,7 +305,7 @@ describe("MCP Lifecycle", () => {
 
       const mockRequest = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: clientCapabilities,
           clientInfo: { name: "TestClient", version: "1.0.0" }
         }
@@ -321,7 +322,7 @@ describe("MCP Lifecycle", () => {
     test("should provide server capabilities", () => {
       const mockRequest = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: {},
           clientInfo: { name: "TestClient", version: "1.0.0" }
         }
@@ -399,7 +400,7 @@ describe("MCP Lifecycle", () => {
       
       const mockRequest = {
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: APP_CONFIG.protocol,
           capabilities: { roots: { listChanged: true } },
           clientInfo: { name: "TestClient", version: "1.0.0" }
         }
@@ -427,7 +428,7 @@ describe("MCP Lifecycle", () => {
       expect(status.uptime).toBeGreaterThanOrEqual(0);
       expect(status.isOperational).toBeDefined();
       expect(status.sessionStats).toBeDefined();
-      expect(status.protocolVersion).toBe("2024-11-05");
+      expect(status.protocolVersion).toBe(APP_CONFIG.protocol);
       expect(status.clientInfo).toBeDefined();
       expect(status.serverInfo).toBeDefined();
       expect(status.clientCapabilities).toBeDefined();
