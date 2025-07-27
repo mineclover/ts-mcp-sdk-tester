@@ -11,6 +11,11 @@
 bun --watch index.ts --port 3000 로 서버가 켜져있기 때문에 추가로 키지 않고 작업해도 된다
 npm run type-check 를 통해 타입 오류 검사 가능하니 구현의 검증은 1차적으로 타입체크로 한다
 
+# examples
+
+https://github.com/modelcontextprotocol/typescript-sdk/tree/main/src/examples/server
+https://github.com/upstash/context7
+
 
 # basic
 

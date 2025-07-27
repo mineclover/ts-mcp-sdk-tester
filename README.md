@@ -84,7 +84,7 @@ npx @modelcontextprotocol/inspector http://localhost:3000/sse
 
 
 ```
-claude mcp add --transport http mcp-protocol http://localhost:3000/mcp
+claude mcp add --transport http mcp-example http://localhost:3000/mcp
 ```
 
 settings.local.json
@@ -99,56 +99,3 @@ settings.local.json
   }
 ```
 
-
-
-### Available Server Options
-
-- `--port 3000` or `-p 3000`: Run HTTP server on specified port
-- `--http`: Force HTTP mode (default port 3000)  
-- `--stdio`: Force stdio mode (default)
-- No arguments: Default stdio mode for MCP inspector compatibility
-
-## Available Testing Tools
-
-The server provides comprehensive testing tools for all MCP SDK features:
-
-### Server State Tools
-- `check_server_connection` - Check if the server is connected to a transport
-
-### Resource Management Tools
-- `register_simple_resource` - Register a static resource with URI, name, and content
-- `list_registered_resources` - List all registered resources
-
-### Tool Management Tools
-- `register_simple_tool` - Register a simple tool with no parameters
-- `register_parameterized_tool` - Register a tool with typed parameters (string/number/boolean)
-- `list_registered_tools` - List all registered tools
-
-### Prompt Management Tools
-- `register_simple_prompt` - Register a simple prompt with no arguments
-- `register_parameterized_prompt` - Register a prompt with arguments and templates
-- `list_registered_prompts` - List all registered prompts
-
-### Notification Testing Tools
-- `send_resource_list_changed` - Test resource list change notifications
-- `send_tool_list_changed` - Test tool list change notifications
-- `send_prompt_list_changed` - Test prompt list change notifications
-
-### Comprehensive Testing
-- `run_comprehensive_test` - Run all major MCP server features in sequence
-
-## Install
-
-```bash
-# Install the command to $HOME/bin or your preferred path
-cp dist/$package_name $HOME/bin/
-```
-
-
-ps aux | grep 75860
-로 선택한 PID의 세션 아이디 얻고
-ps -t s019 
-로 세부 PID 얻은 다음
-ps -o pid,stat,command -p 43536
-로 커멘드 실행된 얻어볼 수 있는데
-그 다음

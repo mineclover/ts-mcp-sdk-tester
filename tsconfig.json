@@ -23,11 +23,12 @@
     "skipDefaultLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "typeRoots": ["./node_modules/@types", "./standard/types"],
+    "types": [],
 
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "exclude": ["node_modules/**/*", "dist/**/*", "**/node_modules/**/*"]
+  "exclude": ["node_modules/**/*", "dist/**/*", "**/node_modules/**/*", "tests/**/*"]
 }
