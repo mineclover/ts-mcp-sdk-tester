@@ -1,255 +1,336 @@
-# MCP 로깅 시스템 종합 문서
+# MCP SDK Tester 종합 문서
 
 ## 📋 개요
 
-이 문서는 MCP (Model Context Protocol) 프로토콜에 완전히 준수하는 로깅 시스템의 설계, 구현, 그리고 활용 방법을 종합적으로 다룹니다.
+이 문서는 MCP (Model Context Protocol) 사양을 완전히 준수하는 테스트 서버의 설계, 구현, 그리고 활용 방법을 종합적으로 다룹니다. 중앙화된 세션 관리, 메모리 효율적인 추상화 패턴, 그리고 MCP Transport 사양 준수를 통해 프로덕션급 MCP 서버 구현을 제공합니다.
 
 ## 📚 문서 구조
 
-### 1. 🎯 [ID 체계 및 컨텍스트 가이드](./ids-and-context-guide.md)
-**MCP 프로토콜 기반 식별자 체계 및 로깅 라이프사이클**
-- MCP 사용자 세션 ID 정의 및 관리
-- 분산 추적을 위한 Trace ID 및 Span ID
-- MCP 요청 처리 라이프사이클
-- 실제 사용 시나리오 및 디버깅 방법
+### 1. 🏗️ [아키텍처 및 플로우](./architecture-flow.md)
+**MCP SDK Tester의 전체 아키텍처 설계**
+- 컴포넌트 간 관계 및 데이터 흐름
+- 요청 처리 라이프사이클
+- 확장성 및 성능 고려사항
 
-**주요 내용**:
+### 2. 🎯 [추상화 패턴 가이드](./abstractions-guide.md)
+**메모리 효율적인 추상화 시스템**
+- 중앙화된 세션 관리 및 단일 책임 원칙
+- 스트리밍 기반 페이지네이션 (배치 작업 제거)
+- 프로토콜 테스트 최적화된 헬스체크
+
+**핵심 구성요소**:
 ```typescript
-// MCP 프로토콜 기반 세션 ID
-sessionId: "mcp_session_user_123_1753546615332"
-
-// W3C 표준 추적 ID
-traceId: "4bf92f3577b34da6a3ce929d0e0e4736"
-
-// 작업 단위 ID
-spanId: "a2fb4a1d1a96d312"
+// 통합 추상화 시스템
+export { 
+  globalSessionManager,      // 중앙화된 세션 관리
+  executeMcpTask,           // 메모리 효율적 작업 실행
+  StreamingPaginatedDataSource, // 스트리밍 페이지네이션
+  McpHealthManager          // 헬스 상태 관리
+} from "./abstractions/index.js";
 ```
 
-### 2. 🔍 [구현 검토 및 분석](./implementation-review.md)
-**현재 구현의 강점과 개선 필요사항**
-- 현재 로깅 시스템의 장단점 분석
-- MCP 프로토콜 준수도 평가
-- 성능 및 확장성 검토
-- 단계별 개선 로드맵
+### 3. 🔄 [세션 관리 마이그레이션](./session-management-migration.md)
+**단일 책임 원칙 기반 세션 관리**
+- 중앙화된 SessionManager 구현
+- 기존 코드와의 호환성 유지
+- 어댑터 패턴을 통한 점진적 마이그레이션
 
-**핵심 발견사항**:
-- ✅ RFC 5424 준수 로그 레벨 완전 지원
-- ✅ 보안 기능 (민감 데이터 필터링, Rate limiting)
-- ⚠️ MCP 프로토콜 메타데이터 부족
-- ⚠️ 세션 관리의 MCP 특화 기능 부족
-
-### 3. 🚀 [구현 개선안](./mcp-implementation-improvements.md)
-**MCP 프로토콜 완전 준수를 위한 구체적 개선 방안**
-- 향상된 MCP 세션 관리 인터페이스
-- MCP 요청/응답 추적 강화
-- 성능 메트릭 및 모니터링 개선
-- 실용적인 코드 예시
-
-**핵심 개선사항**:
+**주요 개선사항**:
 ```typescript
-interface McpSessionContext {
-  sessionId: string;          // mcp_session_{userContext}_{timestamp}
-  clientType: 'claude' | 'vscode' | 'cursor';
-  protocolVersion: string;    // "2024-11-05"
-  capabilities: string[];     // 클라이언트 지원 기능
-  // ... 추가 메타데이터
-}
+// 중앙화된 세션 관리
+const sessionId = globalSessionManager.createSession("claude", "user_123", ["tools"]);
+globalSessionManager.activateSession(sessionId);
+
+// 세션별 작업 실행
+await withSession(sessionId, async () => {
+  await executeMcpTask("task_name", async () => {
+    // 작업 실행
+  });
+});
 ```
 
-### 4. 📖 [로깅 시스템 문서](./logging-system.md)
-**전체 로깅 시스템의 기능 및 사용법**
-- RFC 5424 준수 로깅 레벨
-- 구조화된 로깅 및 메타데이터
-- 보안 기능 (민감 데이터 필터링, Rate limiting)
-- MCP 클라이언트 통합 방법
+### 4. 🚀 [MCP Transport 사양 준수](./mcp-transport-compliance.md)
+**MCP Transport 사양 (2025-06-18) 완전 준수**
+- stdio 및 Streamable HTTP Transport 구현
+- 세션 관리 및 보안 요구사항
+- JSON-RPC 2.0 메시지 형식 준수
+
+**준수 현황**:
+- ✅ JSON-RPC 2.0 메시지 형식
+- ✅ UTF-8 인코딩 지원  
+- ✅ 세션 ID 헤더 지원
+- ✅ Origin 헤더 검증
+- ✅ 로컬호스트 바인딩 보안
+
+### 5. 🔧 [라이프사이클 관리](./lifecycle.md)
+**서버 라이프사이클 및 상태 관리**
+- 초기화, 운영, 종료 단계별 관리
+- Graceful shutdown 구현
+- 상태 추적 및 모니터링
 
 ## 🎯 핵심 가치 제안
 
-### 1. **MCP 프로토콜 완전 준수**
-- MCP 사용자 세션의 정확한 정의 및 구현
-- 프로토콜 표준에 따른 메타데이터 추적
-- 클라이언트별 특화 기능 지원
+### 1. **MCP 사양 완전 준수 (2025-06-18)**
+- stdio 및 Streamable HTTP Transport 완전 구현
+- JSON-RPC 2.0 메시지 형식 및 UTF-8 인코딩
+- 세션 관리 및 보안 요구사항 준수
+- MCP Inspector 호환성
 
-### 2. **기업급 보안 및 성능**
-- 민감 데이터 자동 필터링
-- Rate limiting으로 시스템 보호
-- 메모리 효율적인 세션 관리
-- 자동 정리 작업
+### 2. **중앙화된 세션 관리**
+- 단일 책임 원칙 기반 SessionManager
+- 메모리 효율적인 세션 생명주기 관리
+- 분산 추적 및 OpenTelemetry 통합
+- Graceful shutdown 및 자동 정리
 
-### 3. **포괄적인 관찰 가능성**
-- 분산 추적 지원 (W3C Trace Context)
-- 실시간 성능 메트릭
-- 클라이언트별 분석 기능
-- 디버깅 및 문제 해결 도구
+### 3. **메모리 효율적 추상화**
+- 스트리밍 기반 페이지네이션 (배치 작업 제거)
+- 단순하고 재사용 가능한 패턴
+- 프로토콜 테스트에 최적화된 설계
+- 확장 가능한 컴포넌트 아키텍처
 
-### 4. **개발자 친화적 API**
-- 직관적인 메서드 네이밍
-- 타입 안전성 (TypeScript)
-- 포괄적인 문서화
-- 실용적인 예시 코드
+### 4. **프로덕션급 안정성**
+- 포괄적인 에러 처리 및 복구
+- CORS 보안 및 인증 시스템
+- 헬스 체크 및 모니터링
+- TypeScript 타입 안전성
 
 ## 🚀 빠른 시작
 
-### 1. 기본 설정
-```typescript
-import { logger } from "./standard/logger.js";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-
-// MCP 서버 초기화
-const server = new McpServer({ name: "my-server", version: "1.0.0" }, {});
-logger.initialize(server);
-
-// MCP 세션 생성
-const sessionId = logger.createMcpSession({
-  connectionId: "conn_123",
-  clientType: "claude",
-  protocolVersion: "2024-11-05",
-  userId: "user_123",
-  capabilities: ["tools", "resources"],
-  transportType: "stdio"
-});
-```
-
-### 2. MCP 요청 추적
-```typescript
-// MCP 요청 시작
-const traceId = await logger.logEndpointEntry("tools/call", "req_001", {
-  toolName: "calculator",
-  operation: "add"
-});
-
-// 작업 실행
-const spanId = logger.startOperation("mcp.tool.validation");
-// ... 비즈니스 로직 ...
-logger.endOperation(spanId, { result: "success" });
-
-// 요청 완료
-await logger.logMethodExit("tools/call", {
-  requestId: "req_001",
-  result: { value: 8 },
-  success: true
-}, "tools", traceId);
-```
-
-### 3. 로그 분석
+### 1. 서버 빌드 및 실행
 ```bash
-# MCP 세션별 활동 조회
-grep "mcp_session_user_123" server.log | jq '.'
+# 프로젝트 빌드
+bun run build
 
-# 특정 MCP 요청 추적
-grep "tools/call" server.log | jq '{method: ._mcp.method, duration: ._trace.attributes."mcp.duration.ms"}'
+# stdio transport로 실행 (MCP Inspector용)
+./dist/mcp-sdk-tester
 
-# 클라이언트별 성능 분석
-grep "claude" server.log | jq '{session: ._session.sessionId, tool: ._mcp.toolName}'
+# HTTP transport로 실행 (웹 기반 테스트용)
+./dist/mcp-sdk-tester --port 3000
+```
+
+### 2. MCP Inspector로 테스트
+```bash
+# HTTP transport 연결
+npx @modelcontextprotocol/inspector http://localhost:3000/mcp
+
+# stdio transport 연결 (별도 터미널)
+npx @modelcontextprotocol/inspector ./dist/mcp-sdk-tester
+```
+
+### 3. 기본 API 사용
+```typescript
+import { 
+  globalSessionManager, 
+  executeMcpTask,
+  StreamingPaginatedDataSource 
+} from "./standard/abstractions/index.js";
+
+// 세션 생성 및 관리
+const sessionId = globalSessionManager.createSession("claude", "user_123", ["tools"]);
+globalSessionManager.activateSession(sessionId);
+
+// 메모리 효율적 작업 실행
+await executeMcpTask("process_request", async () => {
+  // 비즈니스 로직 실행
+  return { result: "success" };
+});
+
+// 스트리밍 페이지네이션
+const dataSource = new StreamingPaginatedDataSource(
+  () => Promise.resolve(1000), // 총 개수
+  (start, size) => Promise.resolve(items.slice(start, start + size))
+);
+```
+
+### 4. 상태 확인
+```bash
+# 헬스 체크
+curl http://localhost:3000/health
+
+# 서버 정보
+curl http://localhost:3000/info
+
+# 직접 MCP 요청
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
 ```
 
 ## 📊 성능 특성
 
-### 메모리 사용량 (중간 규모 서버)
-| 구성 요소 | 동시 수량 | 메모리 사용량 | 설명 |
-|-----------|-----------|--------------|------|
-| MCP 세션 | 50개 | ~2KB | 사용자 논리 세션 |
-| 물리 연결 | 100개 | ~3KB | TCP/HTTP/WebSocket |
-| 활성 요청 | 500개 | ~16KB | 진행 중인 MCP 요청 |
-| 작업 단위 | 2000개 | ~32KB | 세부 작업 추적 |
-| **총계** | | **~53KB** | **효율적인 메모리 사용** |
+### 메모리 효율성 (프로토콜 테스트 최적화)
+| 구성 요소 | 특징 | 메모리 사용량 | 설명 |
+|-----------|------|--------------|------|
+| 중앙화된 세션 | 단일 책임 | ~1KB/세션 | 중복 제거된 효율적 관리 |
+| 스트리밍 페이지네이션 | 배치 제거 | ~512B/요청 | 메모리 기반 처리 제거 |
+| 헬스 체커 | 경량화 | ~256B | 기본 메트릭만 수집 |
+| Transport 세션 | 정리 자동화 | ~2KB/연결 | 자동 정리 및 추적 |
+| **총계** | | **최소화** | **프로토콜 테스트에 최적화** |
 
 ### 처리 성능
-- **로그 처리**: >10,000 로그/초
-- **MCP 요청 추적**: <5ms 오버헤드
-- **메모리 정리**: 자동, 백그라운드 실행
-- **클라이언트 알림**: 비동기, 비차단
+- **세션 생성**: <1ms (중앙화된 관리)
+- **MCP 요청 처리**: <5ms 오버헤드
+- **페이지네이션**: 스트리밍, 메모리 제한 없음
+- **Transport 전환**: stdio ↔ HTTP 즉시 지원
 
 ## 🔧 구성 옵션
 
-### 개발 환경
-```typescript
-logger.setLevel("debug");              // 상세 로그
-logger.setSensitiveDataFilter(false);  // 개발용 데이터 표시
-logger.setRateLimiting(false);         // Rate limiting 비활성화
+### Transport 설정
+```bash
+# stdio transport (기본값)
+./dist/mcp-sdk-tester
+
+# HTTP transport
+./dist/mcp-sdk-tester --port 3000
+
+# 커스텀 설정
+./dist/mcp-sdk-tester --transport streamable --port 8080
 ```
 
-### 프로덕션 환경
+### 환경별 설정
 ```typescript
-logger.setLevel("info");               // 필수 로그만
-logger.setSensitiveDataFilter(true);   // 민감 데이터 보호
-logger.setRateLimiting(true);          // 시스템 보호
+// 개발 환경
+const sessionId = globalSessionManager.createSession(
+  "development-client", 
+  "dev-user", 
+  ["tools", "resources", "debug"]
+);
+
+// 프로덕션 환경
+const sessionId = globalSessionManager.createSession(
+  "claude", 
+  "user_123", 
+  ["tools", "resources"]
+);
 ```
 
 ## 🧪 테스트 및 검증
 
-### 현재 테스트 커버리지
-- ✅ **66개 테스트 통과** (100% 성공률)
-- ✅ **RFC 5424 로그 레벨** 완전 검증
-- ✅ **MCP 요청 라이프사이클** 추적 검증
-- ✅ **성능 테스트** (고부하 시나리오)
-- ✅ **보안 테스트** (민감 데이터 필터링)
+### MCP 사양 준수 검증
+- ✅ **MCP Transport 사양 (2025-06-18)** 완전 준수
+- ✅ **JSON-RPC 2.0** 메시지 형식 검증
+- ✅ **세션 관리** 중앙화 및 단일 책임 원칙
+- ✅ **메모리 효율성** 스트리밍 기반 구현
+- ✅ **보안 요구사항** CORS, 인증, 로컬호스트 바인딩
 
 ### 테스트 실행
 ```bash
-# 전체 테스트 실행
-bun test
+# 프로젝트 빌드 및 검증
+bun run build
 
-# 특정 테스트 그룹
-bun test --grep "MCP"
-bun test --grep "Trace Flow"
-bun test --grep "Performance"
+# MCP Inspector로 기능 테스트
+npx @modelcontextprotocol/inspector ./dist/mcp-sdk-tester
+
+# HTTP 엔드포인트 테스트
+./dist/mcp-sdk-tester --port 3000 &
+curl http://localhost:3000/health
+```
+
+### 호환성 검증
+```bash
+# MCP Inspector 호환성
+npx @modelcontextprotocol/inspector http://localhost:3000/mcp
+
+# 표준 MCP 클라이언트 호환성
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "mcp-session-id: test-session" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {...}}'
 ```
 
 ## 🗂️ 파일 구조
 
 ```
 docs/
-├── README.md                          # 이 파일 - 종합 개요
-├── ids-and-context-guide.md          # MCP ID 체계 및 컨텍스트
-├── implementation-review.md           # 현재 구현 분석
-├── mcp-implementation-improvements.md # 구체적 개선 방안
-└── logging-system.md                 # 로깅 시스템 전체 문서
-
-tests/
-├── logging-system-simple.test.ts     # 기본 로깅 기능 테스트
-├── trace-flow.test.ts                # 추적 흐름 테스트
-└── performance.test.ts               # 성능 테스트
+├── README.md                          # 종합 개요 (이 파일)
+├── architecture-flow.md               # 아키텍처 설계
+├── abstractions-guide.md              # 추상화 패턴 가이드
+├── session-management-migration.md    # 세션 관리 마이그레이션
+├── mcp-transport-compliance.md        # MCP Transport 사양 준수
+└── lifecycle.md                       # 라이프사이클 관리
 
 standard/
-├── logger.ts                         # 핵심 로거 구현
+├── abstractions/                      # 추상화 시스템
+│   ├── index.ts                      # 통합 추상화 내보내기
+│   ├── session-manager.ts            # 중앙화된 세션 관리
+│   ├── lifecycle-adapter.ts          # 라이프사이클 어댑터
+│   ├── logging-patterns.ts           # 메모리 효율적 로깅
+│   ├── pagination-patterns.ts        # 스트리밍 페이지네이션
+│   └── ping-patterns.ts              # 헬스 체크 패턴
+├── transports.ts                     # MCP Transport 구현
 ├── lifecycle.ts                      # 라이프사이클 관리
-└── otel-session.ts                   # OTel 세션 통합
+├── index.ts                          # 표준 엔드포인트 등록
+└── constants.ts                      # 애플리케이션 상수
+
+index.ts                               # 메인 진입점
 ```
 
 ## 🛣️ 개발 로드맵
 
-### Phase 1: MCP 프로토콜 완전 준수 ✅
-- [x] MCP 세션 ID 정의 재정립
-- [x] 로깅 라이프사이클 MCP 기준 정렬
-- [x] 문서화 완료
-- [x] 구현 분석 및 개선안 도출
+### Phase 1: 기반 구조 구축 ✅
+- [x] MCP Transport 사양 (2025-06-18) 완전 준수
+- [x] stdio 및 Streamable HTTP Transport 구현
+- [x] JSON-RPC 2.0 메시지 형식 지원
+- [x] 기본 보안 및 CORS 설정
 
-### Phase 2: 핵심 기능 구현 (진행 예정)
-- [ ] McpSessionContext 인터페이스 구현
-- [ ] logMcpRequest/logMcpResponse 메서드
-- [ ] MCP 메타데이터 추가
-- [ ] 성능 메트릭 수집
+### Phase 2: 세션 관리 개선 ✅
+- [x] 중앙화된 SessionManager 구현
+- [x] 단일 책임 원칙 적용
+- [x] 어댑터 패턴을 통한 기존 코드 호환성
+- [x] Transport 시스템 세션 관리 통합
 
-### Phase 3: 고급 기능 (계획)
-- [ ] 실시간 모니터링 대시보드
-- [ ] 자동 성능 최적화
-- [ ] 분산 로깅 지원
-- [ ] AI 기반 이상 탐지
+### Phase 3: 메모리 효율성 최적화 ✅
+- [x] 스트리밍 기반 페이지네이션 구현
+- [x] 배치 작업 제거 및 메모리 최적화
+- [x] 추상화 패턴 단순화
+- [x] 프로토콜 테스트 최적화
+
+### Phase 4: 프로덕션 안정성 ✅
+- [x] Graceful shutdown 구현
+- [x] 에러 처리 및 복구 메커니즘
+- [x] 헬스 체크 및 모니터링
+- [x] serverInfo 매개변수 누락 문제 해결
+
+### Phase 5: 문서화 및 호환성 ✅
+- [x] 종합적인 문서 체계 구축
+- [x] MCP Inspector 호환성 검증
+- [x] 사용 가이드 및 예시 제공
+- [x] 최신 변경사항 반영 (중앙화된 SessionManager, Transport 리팩토링)
+
+### 향후 계획
+- [ ] 확장된 MCP 기능 지원 (elicitation, sampling)
+- [ ] 성능 모니터링 대시보드
+- [ ] 고급 디버깅 도구
+- [ ] 클러스터 모드 지원
 
 ## 🤝 기여 방법
 
-1. **이슈 리포팅**: 버그나 개선사항을 GitHub Issues에 등록
-2. **테스트 추가**: 새로운 테스트 케이스 작성
-3. **문서 개선**: 사용 예시나 가이드 추가
-4. **코드 리뷰**: 구현 개선사항 제안
+1. **MCP 사양 준수**: 새로운 MCP 기능 구현 시 최신 사양 참조
+2. **메모리 효율성**: 프로토콜 테스트 목적에 맞는 경량화된 구현
+3. **단일 책임 원칙**: 각 컴포넌트의 명확한 역할 분리
+4. **문서화**: 코드 변경 시 관련 문서 동시 업데이트
 
-## 📞 지원 및 문의
+## 📞 지원 및 사용법
 
-- **문서**: 이 README와 연결된 상세 문서들 참고
-- **테스트**: `bun test` 명령으로 전체 기능 검증
-- **예시**: `tests/` 디렉토리의 실제 사용 패턴 참고
+### 빠른 시작
+```bash
+# 1. 빌드
+bun run build
+
+# 2. 테스트
+./dist/mcp-sdk-tester --port 3000
+curl http://localhost:3000/health
+
+# 3. MCP Inspector 연결
+npx @modelcontextprotocol/inspector http://localhost:3000/mcp
+```
+
+### 문서 참조
+- **전체 아키텍처**: [architecture-flow.md](./architecture-flow.md)
+- **세션 관리**: [session-management-migration.md](./session-management-migration.md)
+- **Transport 구현**: [mcp-transport-compliance.md](./mcp-transport-compliance.md)
+- **추상화 패턴**: [abstractions-guide.md](./abstractions-guide.md)
 
 ---
 
-**MCP 로깅 시스템**은 Model Context Protocol의 완전한 구현을 목표로 하며, 엔터프라이즈급 안정성과 개발자 친화적 API를 제공합니다.
+**MCP SDK Tester**는 Model Context Protocol 사양을 완전히 준수하며, 메모리 효율적이고 확장 가능한 프로토콜 테스트 서버를 제공합니다.
